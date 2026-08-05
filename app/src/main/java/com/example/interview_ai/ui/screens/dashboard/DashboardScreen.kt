@@ -1,5 +1,9 @@
 package com.example.interview_ai.ui.screens.dashboard
 
+import android.net.Uri
+import android.provider.OpenableColumns
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,6 +23,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
@@ -26,25 +33,32 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -68,6 +82,7 @@ import com.example.interview_ai.ui.components.SurfaceCard
 import com.example.interview_ai.ui.navigation.Routes
 import com.example.interview_ai.viewmodel.DashboardViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     navController: NavHostController,
@@ -75,6 +90,19 @@ fun DashboardScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedItem by remember { mutableIntStateOf(0) }
+    
+    val context = LocalContext.current
+    var showUploadSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val fileName = getFileNameFromUri(context, it) ?: "resume.pdf"
+            viewModel.uploadResume(fileName)
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -342,7 +370,8 @@ fun DashboardScreen(
             SurfaceCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { /* Future route: Resume upload screen or dialog */ },
+                    .clickable { showUploadSheet = true },
+                borderColor = if (uiState.uploadedResumeName != null) AccentCyan else BorderSubtle,
                 cornerRadius = AppRadius.lg,
                 padding = AppSpacing.lg
             ) {
@@ -352,8 +381,16 @@ fun DashboardScreen(
                     Box(
                         modifier = Modifier
                             .size(48.dp)
-                            .background(AccentCyan.copy(alpha = 0.15f), CircleShape)
-                            .border(1.dp, AccentCyan.copy(alpha = 0.3f), CircleShape),
+                            .background(
+                                if (uiState.uploadedResumeName != null) AccentCyan.copy(alpha = 0.2f)
+                                else AccentCyan.copy(alpha = 0.15f),
+                                CircleShape
+                            )
+                            .border(
+                                1.dp,
+                                if (uiState.uploadedResumeName != null) AccentCyan else AccentCyan.copy(alpha = 0.3f),
+                                CircleShape
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -366,15 +403,18 @@ fun DashboardScreen(
                     Spacer(modifier = Modifier.width(AppSpacing.md))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Upload Resume (PDF)",
+                            text = uiState.uploadedResumeName ?: "Upload Resume (PDF)",
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                            color = TextPrimary
+                            color = TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Customize questions to fit your parsed resume content",
+                            text = if (uiState.uploadedResumeName != null) "Active Resume • Manage or replace"
+                                   else "Customize questions to fit your parsed resume content",
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextMuted
+                            color = if (uiState.uploadedResumeName != null) AccentCyan else TextMuted
                         )
                     }
                 }
@@ -475,4 +515,183 @@ fun DashboardScreen(
             }
         }
     }
+
+    if (showUploadSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showUploadSheet = false },
+            sheetState = sheetState,
+            containerColor = SurfaceDark,
+            dragHandle = {
+                Box(
+                    modifier = Modifier
+                        .padding(vertical = AppSpacing.md)
+                        .size(width = 40.dp, height = 4.dp)
+                        .background(BorderSubtle, CircleShape)
+                )
+            }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = AppSpacing.xl)
+                    .padding(bottom = AppSpacing.xxl),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Upload Resume",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = TextPrimary
+                )
+                Spacer(modifier = Modifier.height(AppSpacing.xs))
+                Text(
+                    text = "Add your PDF resume to customize AI questions",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextMuted
+                )
+                Spacer(modifier = Modifier.height(AppSpacing.xl))
+
+                if (uiState.uploadedResumeName != null) {
+                    // Uploaded resume preview
+                    SurfaceCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        borderColor = AccentCyan,
+                        padding = AppSpacing.lg
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "PDF Icon",
+                                    tint = AccentCyan,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(AppSpacing.md))
+                                Column {
+                                    Text(
+                                        text = uiState.uploadedResumeName ?: "",
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = TextPrimary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Custom tailoring active",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Success
+                                    )
+                                }
+                            }
+
+                            // Delete button
+                            IconButton(onClick = { viewModel.removeResume() }) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete Resume",
+                                    tint = Error
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(AppSpacing.xl))
+
+                    com.example.interview_ai.ui.components.PrimaryButton(
+                        text = "Done",
+                        onClick = { showUploadSheet = false }
+                    )
+                } else if (uiState.isUploading) {
+                    // Uploading state
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        LinearProgressIndicator(
+                            progress = { uiState.uploadProgress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp),
+                            color = Primary,
+                            trackColor = BorderSubtle,
+                            strokeCap = StrokeCap.Round
+                        )
+                        Spacer(modifier = Modifier.height(AppSpacing.md))
+                        Text(
+                            text = "Uploading... ${(uiState.uploadProgress * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextPrimary
+                        )
+                    }
+                } else {
+                    // Drop zone upload
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .background(SurfaceVariantDark.copy(alpha = 0.5f), RoundedCornerShape(AppRadius.lg))
+                            .border(1.dp, BorderSubtle, RoundedCornerShape(AppRadius.lg))
+                            .clickable { filePickerLauncher.launch("application/pdf") },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(AppSpacing.lg)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Upload Add Icon",
+                                tint = Primary,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(AppSpacing.md))
+                            Text(
+                                text = "Tap here to select PDF resume",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                color = TextPrimary
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "PDF files up to 10MB",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextMuted
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun getFileNameFromUri(context: android.content.Context, uri: Uri): String? {
+    var result: String? = null
+    if (uri.scheme == "content") {
+        val cursor = context.contentResolver.query(uri, null, null, null, null)
+        try {
+            if (cursor != null && cursor.moveToFirst()) {
+                val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (index != -1) {
+                    result = cursor.getString(index)
+                }
+            }
+        } finally {
+            cursor?.close()
+        }
+    }
+    if (result == null) {
+        result = uri.path
+        val cut = result?.lastIndexOf('/')
+        if (cut != null && cut != -1) {
+            result = result.substring(cut + 1)
+        }
+    }
+    return result
 }

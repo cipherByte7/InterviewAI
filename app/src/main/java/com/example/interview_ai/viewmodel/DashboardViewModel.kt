@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.interview_ai.data.model.DashboardUiState
 import com.example.interview_ai.data.model.InterviewSession
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,4 +42,43 @@ class DashboardViewModel : ViewModel() {
             }
         }
     }
+
+    fun uploadResume(fileName: String) {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isUploading = true,
+                    uploadProgress = 0.0f,
+                    uploadedResumeName = null
+                )
+            }
+            
+            // Simulate incremental upload progress (e.g. 20% steps)
+            for (progress in 1..5) {
+                delay(300)
+                _uiState.update {
+                    it.copy(uploadProgress = progress * 0.2f)
+                }
+            }
+            
+            _uiState.update {
+                it.copy(
+                    isUploading = false,
+                    uploadedResumeName = fileName,
+                    uploadProgress = 1.0f
+                )
+            }
+        }
+    }
+
+    fun removeResume() {
+        _uiState.update {
+            it.copy(
+                uploadedResumeName = null,
+                uploadProgress = 0f,
+                isUploading = false
+            )
+        }
+    }
 }
+

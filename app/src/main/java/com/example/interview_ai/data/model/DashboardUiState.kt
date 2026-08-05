@@ -14,5 +14,8 @@ data class DashboardUiState(
     val totalSessions: Int = 0,
     val totalHours: Float = 0.0f,
     val recentInterviews: List<InterviewSession> = emptyList(),
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val uploadedResumeName: String? = null,
+    val uploadProgress: Float = 0f,
+    val isUploading: Boolean = false
 )

@@ -234,15 +234,16 @@ app/src/main/res/
 - **Activity Feed**: Interactive list of recent sessions displaying role titles, date details, and custom colored score badges (Success/Warning/Error) for status.
 - **Central Navigation**: Customized Bottom Navigation Bar (Home, History, Profile) with active indicator highlights.
 
+### Phase 5 — Resume Upload ✅
+- **Interactive sheet**: Integrated custom M3 `ModalBottomSheet` displaying resume status and offering file drop zone.
+- **File System Launcher**: Integrated `rememberLauncherForActivityResult` triggering `GetContent` contract to select `.pdf` documents securely from device storage.
+- **Metadata query**: Extracted file names from content resolver queries using `OpenableColumns.DISPLAY_NAME`.
+- **Upload simulator**: Built ViewModel progress emitter showing simulated progress animations up to 100% completion.
+- **State updates**: Dynamically highlighted the Dashboard Resume card with cyan borders when active, displaying file details and providing click-to-delete actions.
+
 ---
 
 ## 7. Features To Be Built (Future Phases)
-
-### Phase 5 — Resume Upload
-- PDF file picker using Android Storage Access Framework
-- Upload progress indicator
-- Resume file validation (type check, size limit)
-- Store resume reference locally and/or send to backend
 
 ### Phase 6 — Resume Parsing
 - Send uploaded PDF to backend or Gemini API for text extraction
