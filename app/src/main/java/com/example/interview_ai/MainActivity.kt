@@ -3,7 +3,9 @@ package com.example.interview_ai
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.example.interview_ai.ui.theme.InterviewAITheme
+import androidx.navigation.compose.rememberNavController
+import com.example.interview_ai.theme.InterviewAITheme
+import com.example.interview_ai.ui.navigation.AppNavGraph
 
 class MainActivity : ComponentActivity() {
 
@@ -11,9 +13,17 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
+
             InterviewAITheme {
 
+                val navController = rememberNavController()
+
+                AppNavGraph(
+                    navController = navController
+                )
+
             }
+
         }
     }
 }
