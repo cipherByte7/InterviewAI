@@ -4,18 +4,21 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.interview_ai.ui.screens.auth.LoginScreen
+import com.example.interview_ai.ui.screens.auth.RegisterScreen
 import com.example.interview_ai.ui.screens.dashboard.DashboardScreen
 import com.example.interview_ai.ui.screens.history.HistoryScreen
 import com.example.interview_ai.ui.screens.interview.InterviewScreen
-import com.example.interview_ai.ui.screens.auth.LoginScreen
 import com.example.interview_ai.ui.screens.profile.ProfileScreen
-import com.example.interview_ai.ui.screens.auth.RegisterScreen
 import com.example.interview_ai.ui.screens.report.ReportScreen
 import com.example.interview_ai.ui.screens.splash.SplashScreen
+import com.example.interview_ai.viewmodel.AuthViewModel
 
 @Composable
 fun AppNavGraph(
-    navController: NavHostController
+    navController: NavHostController,
+    authViewModel: AuthViewModel = viewModel()
 ) {
 
     NavHost(
@@ -28,11 +31,11 @@ fun AppNavGraph(
         }
 
         composable(Routes.Login.route) {
-            LoginScreen(navController)
+            LoginScreen(navController, authViewModel)
         }
 
         composable(Routes.Register.route) {
-            RegisterScreen(navController)
+            RegisterScreen(navController, authViewModel)
         }
 
         composable(Routes.Dashboard.route) {
