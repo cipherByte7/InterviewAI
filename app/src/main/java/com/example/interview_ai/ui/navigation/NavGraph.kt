@@ -15,12 +15,14 @@ import com.example.interview_ai.ui.screens.report.ReportScreen
 import com.example.interview_ai.ui.screens.splash.SplashScreen
 import com.example.interview_ai.viewmodel.AuthViewModel
 import com.example.interview_ai.viewmodel.DashboardViewModel
+import com.example.interview_ai.viewmodel.InterviewViewModel
 
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
     authViewModel: AuthViewModel = viewModel(),
-    dashboardViewModel: DashboardViewModel = viewModel()
+    dashboardViewModel: DashboardViewModel = viewModel(),
+    interviewViewModel: InterviewViewModel = viewModel()
 ) {
 
     NavHost(
@@ -45,7 +47,7 @@ fun AppNavGraph(
         }
 
         composable(Routes.Interview.route) {
-            InterviewScreen(navController)
+            InterviewScreen(navController, interviewViewModel, dashboardViewModel)
         }
 
         composable(Routes.Report.route) {

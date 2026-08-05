@@ -82,7 +82,9 @@ app/src/main/java/com/example/interview_ai/
 │   │   ├── User.kt                # User data class (id, name, email, targetRole)
 │   │   ├── AuthUiState.kt         # UI state for auth screens (inputs, errors, loading)
 │   │   ├── DashboardUiState.kt    # UI state for dashboard metrics and session data
-│   │   └── ParsedResume.kt        # Structured parsed resume data model (skills, role, exp)
+│   │   ├── ParsedResume.kt        # Structured parsed resume data model (skills, role, exp)
+│   │   ├── Question.kt            # Structured question details (id, text, category)
+│   │   └── InterviewUiState.kt    # UI state for interview config parameters
 │   ├── remote/                     # (empty) Future: Remote data source implementations
 │   └── repository/                 # (empty) Future: Repository pattern implementations
 │
@@ -127,7 +129,8 @@ app/src/main/java/com/example/interview_ai/
 │
 └── viewmodel/
     ├── AuthViewModel.kt           # Manages auth state, input validation, login/register logic (currently simulated)
-    └── DashboardViewModel.kt      # Manages dashboard statistics, metrics loading, and history activity
+    ├── DashboardViewModel.kt      # Manages dashboard statistics, metrics loading, and history activity
+    └── InterviewViewModel.kt      # Manages interview configurations and tailored questions list
 ```
 
 ### Resource Files
@@ -249,18 +252,16 @@ app/src/main/res/
 - **Interactive Review Card**: Implemented a profile review card displaying extracted role, education, experience years, and skill tags inside a custom M3 `FlowRow`.
 - **Handoff verification**: Enabled user verification action which updates target role configurations dynamically across the app.
 
+### Phase 7 — AI Question Generation ✅
+- **Tailored config interface**: Implemented user selector controls for difficulty level (Junior/Mid/Senior), category focus (Technical/Behavioral/Mixed), and question count (5/10/15).
+- **Domain logic generator**: Built custom ViewModel mock algorithms creating questions aligned directly to parsed resume skills and target developer roles.
+- **Loader animation**: Styled an AI progress loading screen demonstrating step progress from 0% to 100%.
+- **Interactive Question review**: Designed scrollable question lists in mock prep view with category badges and duration estimates.
+- **ViewModel state wiring**: Connected Dashboard state directly with Interview customizer parameters.
+
 ---
 
 ## 7. Features To Be Built (Future Phases)
-
-### Phase 7 — AI Question Generation
-- Integrate Gemini API
-- Generate personalized interview questions based on:
-  - Parsed resume content
-  - Target role / specialization
-  - Experience level
-- Question categories: technical, behavioral, situational
-- Question difficulty adaptation
 
 ### Phase 8 — Voice-Based Mock Interview
 - Android Speech Recognition (Speech-to-Text) for user answers
