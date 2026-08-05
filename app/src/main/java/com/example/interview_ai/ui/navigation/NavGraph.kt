@@ -17,6 +17,7 @@ import com.example.interview_ai.viewmodel.AuthViewModel
 import com.example.interview_ai.viewmodel.DashboardViewModel
 import com.example.interview_ai.viewmodel.InterviewViewModel
 import com.example.interview_ai.viewmodel.ReportViewModel
+import com.example.interview_ai.viewmodel.HistoryViewModel
 
 @Composable
 fun AppNavGraph(
@@ -24,7 +25,8 @@ fun AppNavGraph(
     authViewModel: AuthViewModel = viewModel(),
     dashboardViewModel: DashboardViewModel = viewModel(),
     interviewViewModel: InterviewViewModel = viewModel(),
-    reportViewModel: ReportViewModel = viewModel()
+    reportViewModel: ReportViewModel = viewModel(),
+    historyViewModel: HistoryViewModel = viewModel()
 ) {
 
     NavHost(
@@ -57,7 +59,7 @@ fun AppNavGraph(
         }
 
         composable(Routes.History.route) {
-            HistoryScreen(navController)
+            HistoryScreen(navController, historyViewModel)
         }
 
         composable(Routes.Profile.route) {

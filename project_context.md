@@ -277,16 +277,16 @@ app/src/main/res/
 - **Feedback Breakdown Panels**: Added bullet points isolating Key Strengths (success markers) and Areas of Improvement (warning icons).
 - **AI Action Plan block**: Styled a quotation panel highlighting specific custom improvement roadmaps.
 
+### Phase 10 — Reports & History ✅
+- **Evaluation Dashboard**: Built comprehensive per-session performance reports tracking score breakdowns and insights (implemented in Phase 9).
+- **History Record List**: Designed History Screen layout listing past mock sessions with dynamic score indicators (Success/Warning/Error color bounds).
+- **Search capabilities**: Wired up real-time search queries filtering records by target role title matching.
+- **Horizontal Filter chips**: Integrated tag chips allowing quick filtering by session category focus (All, Technical, Behavioral).
+- **History ViewModel flow**: Implemented state handlers syncing search filters and loading simulated mock interview databases.
+
 ---
 
 ## 7. Features To Be Built (Future Phases)
-
-### Phase 10 — Reports & History
-- Detailed per-interview performance report screen
-- Score breakdown with visual charts/graphs
-- Before/after progress comparison across sessions
-- Interview history list with filters (by date, role, score)
-- Export report as PDF (optional)
 
 ### Additional Future Features (Post-MVP)
 - Real backend integration (Node.js + Express + MongoDB)
