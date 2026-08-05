@@ -16,5 +16,13 @@ data class InterviewUiState(
     val generatedQuestions: List<Question> = emptyList(),
     val isGenerating: Boolean = false,
     val generationProgress: Float = 0f,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val currentQuestionIndex: Int = 0,
+    val activeQuestionText: String = "",
+    val isAiSpeaking: Boolean = false,
+    val isListening: Boolean = false,
+    val userTranscript: String = "",
+    val isThinking: Boolean = false,
+    val sessionDurationSeconds: Int = 0,
+    val isPaused: Boolean = false
 )

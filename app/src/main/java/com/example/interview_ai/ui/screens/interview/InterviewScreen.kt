@@ -18,13 +18,27 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.ui.draw.scale
 import com.example.interview_ai.data.model.Question
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -79,7 +93,7 @@ fun InterviewScreen(
 
     Scaffold(
         topBar = {
-            if (uiState.status != InterviewStatus.GENERATING) {
+            if (uiState.status != InterviewStatus.GENERATING && uiState.status != InterviewStatus.ACTIVE) {
                 AppTopBar(
                     title = if (uiState.status == InterviewStatus.READY) "Review Mock Prep" else "Configure AI Session",
                     subtitle = if (uiState.status == InterviewStatus.READY) " tailor-made interview questions" else "Setup mock interview parameters",
@@ -134,12 +148,32 @@ fun InterviewScreen(
                         difficulty = uiState.selectedDifficulty,
                         onReconfigure = { interviewViewModel.resetInterview() },
                         onStart = {
-                            // Future Mock Interview Voice interaction screen launch
+                            interviewViewModel.startInterviewSession()
+                        }
+                    )
+                }
+                InterviewStatus.ACTIVE -> {
+                    ActiveInterviewContent(
+                        uiState = uiState,
+                        onPauseToggle = { interviewViewModel.togglePause() },
+                        onSubmit = {
+                            interviewViewModel.submitUserAnswer {
+                                navController.navigate(com.example.interview_ai.ui.navigation.Routes.Report.route) {
+                                    popUpTo(com.example.interview_ai.ui.navigation.Routes.Interview.route) { inclusive = true }
+                                }
+                            }
+                        },
+                        onFinish = {
+                            interviewViewModel.finishInterview {
+                                navController.navigate(com.example.interview_ai.ui.navigation.Routes.Report.route) {
+                                    popUpTo(com.example.interview_ai.ui.navigation.Routes.Interview.route) { inclusive = true }
+                                }
+                            }
                         }
                     )
                 }
                 else -> {
-                    // Active & completed screens (handled in Phase 8)
+                    // Completed screens
                 }
             }
         }
@@ -505,5 +539,227 @@ fun ReadyContent(
                 }
             )
         }
+    }
+}
+
+@Composable
+fun ActiveInterviewContent(
+    uiState: com.example.interview_ai.data.model.InterviewUiState,
+    onPauseToggle: () -> Unit,
+    onSubmit: () -> Unit,
+    onFinish: () -> Unit
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = if (uiState.isAiSpeaking || uiState.isListening) 1.25f else 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+
+    val minutes = uiState.sessionDurationSeconds / 60
+    val seconds = uiState.sessionDurationSeconds % 60
+    val timeFormatted = String.format("%02d:%02d", minutes, seconds)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(AppSpacing.lg),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Active session header details
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .background(Primary.copy(alpha = 0.2f), RoundedCornerShape(AppRadius.sm))
+                    .border(0.5.dp, Primary, RoundedCornerShape(AppRadius.sm))
+                    .padding(horizontal = AppSpacing.sm, vertical = 2.dp)
+            ) {
+                Text(
+                    text = "Question ${uiState.currentQuestionIndex + 1} of ${uiState.selectedQuestionCount}",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = Primary
+                )
+            }
+            Text(
+                text = timeFormatted,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = TextPrimary
+            )
+        }
+
+        Spacer(modifier = Modifier.height(54.dp))
+
+        // Pulsing audio visualizer orb
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(160.dp)
+        ) {
+            // Pulse circle backdrop
+            Box(
+                modifier = Modifier
+                    .size(120.dp)
+                    .scale(pulseScale)
+                    .background(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                if (uiState.isAiSpeaking) Primary.copy(alpha = 0.4f)
+                                else if (uiState.isListening) Success.copy(alpha = 0.4f)
+                                else BorderSubtle,
+                                Color.Transparent
+                            )
+                        ),
+                        shape = CircleShape
+                    )
+            )
+
+            // Core center orb
+            Box(
+                modifier = Modifier
+                    .size(90.dp)
+                    .background(SurfaceDark, CircleShape)
+                    .border(
+                        width = 1.5.dp,
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                if (uiState.isAiSpeaking) Primary
+                                else if (uiState.isListening) Success
+                                else BorderSubtle,
+                                if (uiState.isAiSpeaking) AccentCyan
+                                else if (uiState.isListening) AccentCyan
+                                else BorderSubtle
+                            )
+                        ),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (uiState.isAiSpeaking) Icons.Default.Star
+                                  else if (uiState.isListening) Icons.Default.PlayArrow
+                                  else Icons.Default.Refresh,
+                    contentDescription = "Status Icon",
+                    tint = if (uiState.isAiSpeaking) Primary
+                           else if (uiState.isListening) Success
+                           else TextMuted,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(AppSpacing.lg))
+
+        // Speaking / Listening status string
+        Text(
+            text = when {
+                uiState.isPaused -> "Interview Paused"
+                uiState.isAiSpeaking -> "AI Speaking..."
+                uiState.isListening -> "Listening to your answer..."
+                uiState.isThinking -> "AI analyzing response..."
+                else -> "Active Mock Session"
+            },
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            color = if (uiState.isListening) Success else if (uiState.isAiSpeaking) Primary else TextSecondary
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Question display card
+        SurfaceCard(
+            modifier = Modifier.fillMaxWidth(),
+            borderColor = if (uiState.isAiSpeaking) Primary else BorderSubtle,
+            padding = AppSpacing.md
+        ) {
+            Column {
+                Text(
+                    text = "AI INTERVIEWER",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = TextMuted
+                )
+                Spacer(modifier = Modifier.height(AppSpacing.xs))
+                Text(
+                    text = uiState.activeQuestionText,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = TextPrimary,
+                    lineHeight = 24.sp
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(AppSpacing.lg))
+
+        // Real-time user speech recognition transcript preview
+        SurfaceCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            padding = AppSpacing.md
+        ) {
+            Column {
+                Text(
+                    text = "YOUR TRANSCRIPT (REAL-TIME)",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = TextMuted
+                )
+                Spacer(modifier = Modifier.height(AppSpacing.xs))
+                Text(
+                    text = uiState.userTranscript.ifEmpty { "Speech text will appear here as you answer..." },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (uiState.userTranscript.isEmpty()) TextMuted else TextPrimary,
+                    lineHeight = 22.sp
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(AppSpacing.lg))
+
+        // Bottom control action buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.md),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Pause Toggle Button
+            SecondaryButton(
+                text = if (uiState.isPaused) "Resume" else "Pause",
+                onClick = onPauseToggle,
+                modifier = Modifier.weight(1f),
+                leadingIcon = {
+                    Icon(
+                        imageVector = if (uiState.isPaused) Icons.Default.PlayArrow else Icons.Default.Refresh,
+                        contentDescription = "Pause Control",
+                        tint = TextPrimary
+                    )
+                }
+            )
+
+            // Submit Answer button
+            PrimaryButton(
+                text = if (uiState.currentQuestionIndex + 1 == uiState.selectedQuestionCount) "Submit & Finish" else "Submit Answer",
+                onClick = onSubmit,
+                modifier = Modifier.weight(1.3f),
+                enabled = uiState.userTranscript.isNotEmpty() && !uiState.isAiSpeaking && !uiState.isPaused && !uiState.isThinking,
+                isLoading = uiState.isThinking
+            )
+        }
+
+        Spacer(modifier = Modifier.height(AppSpacing.sm))
+
+        // Early End session exit button
+        Text(
+            text = "End session early",
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+            color = Error,
+            modifier = Modifier
+                .clickable { onFinish() }
+                .padding(AppSpacing.sm)
+        )
     }
 }

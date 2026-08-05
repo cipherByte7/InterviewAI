@@ -33,6 +33,136 @@ class InterviewViewModel : ViewModel() {
         _uiState.update { InterviewUiState() }
     }
 
+    fun startInterviewSession() {
+        val questions = _uiState.value.generatedQuestions
+        if (questions.isEmpty()) return
+
+        _uiState.update {
+            it.copy(
+                status = InterviewStatus.ACTIVE,
+                currentQuestionIndex = 0,
+                activeQuestionText = questions[0].text,
+                sessionDurationSeconds = 0,
+                isPaused = false
+            )
+        }
+
+        // Start timer
+        viewModelScope.launch {
+            while (_uiState.value.status == InterviewStatus.ACTIVE) {
+                delay(1000)
+                if (!_uiState.value.isPaused) {
+                    _uiState.update {
+                        it.copy(sessionDurationSeconds = it.sessionDurationSeconds + 1)
+                    }
+                }
+            }
+        }
+
+        speakActiveQuestion()
+    }
+
+    private fun speakActiveQuestion() {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isAiSpeaking = true,
+                    isListening = false,
+                    userTranscript = "",
+                    isThinking = false
+                )
+            }
+            delay(2500) // Simulate AI speaking the question
+
+            if (!_uiState.value.isPaused) {
+                _uiState.update {
+                    it.copy(
+                        isAiSpeaking = false,
+                        isListening = true
+                    )
+                }
+                simulateUserTranscription()
+            }
+        }
+    }
+
+    private fun simulateUserTranscription() {
+        viewModelScope.launch {
+            val transcriptBase = listOf(
+                "I think Kotlin coroutines manage threading asynchronously. We use launch when we don't need a result, which is fire and forget, and async when we want to return a deferred value.",
+                "Yes, Compose recomposition occurs when input parameters change. To optimize, we can mark classes stable or use remember to cache states, preventing unnecessary composition tree updates.",
+                "In my past role, I worked on modularizing our application. We separated it into core, network, and feature modules. The main challenge was handling navigation dependencies."
+            )
+            
+            val activeText = transcriptBase[_uiState.value.currentQuestionIndex % transcriptBase.size]
+            val words = activeText.split(" ")
+            var currentTranscript = ""
+
+            for (word in words) {
+                if (_uiState.value.status != InterviewStatus.ACTIVE || !_uiState.value.isListening || _uiState.value.isPaused) {
+                    break
+                }
+                delay(180) // Simulate real-time word-by-word STT transcription
+                currentTranscript = if (currentTranscript.isEmpty()) word else "$currentTranscript $word"
+                _uiState.update { it.copy(userTranscript = currentTranscript) }
+            }
+        }
+    }
+
+    fun submitUserAnswer(onCompleted: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isListening = false,
+                    isThinking = true
+                )
+            }
+            delay(1800) // Simulate AI analyzing response and deciding on follow-up
+
+            val currentIndex = _uiState.value.currentQuestionIndex
+            val questions = _uiState.value.generatedQuestions
+
+            if (currentIndex + 1 < questions.size) {
+                _uiState.update {
+                    it.copy(
+                        currentQuestionIndex = currentIndex + 1,
+                        activeQuestionText = questions[currentIndex + 1].text,
+                        isThinking = false
+                    )
+                }
+                speakActiveQuestion()
+            } else {
+                _uiState.update {
+                    it.copy(
+                        status = InterviewStatus.COMPLETED,
+                        isThinking = false
+                    )
+                }
+                onCompleted()
+            }
+        }
+    }
+
+    fun togglePause() {
+        _uiState.update {
+            val nextPaused = !it.isPaused
+            it.copy(
+                isPaused = nextPaused,
+                // If resuming and was listening, trigger transcription simulation again
+                isListening = if (!nextPaused && !it.isAiSpeaking && !it.isThinking) true else it.isListening
+            )
+        }
+        
+        if (!_uiState.value.isPaused && _uiState.value.isListening) {
+            simulateUserTranscription()
+        }
+    }
+
+    fun finishInterview(onCompleted: () -> Unit) {
+        _uiState.update { it.copy(status = InterviewStatus.COMPLETED) }
+        onCompleted()
+    }
+
     fun generateQuestions(targetRole: String, skills: List<String>) {
         viewModelScope.launch {
             _uiState.update {

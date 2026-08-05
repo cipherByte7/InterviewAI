@@ -259,17 +259,17 @@ app/src/main/res/
 - **Interactive Question review**: Designed scrollable question lists in mock prep view with category badges and duration estimates.
 - **ViewModel state wiring**: Connected Dashboard state directly with Interview customizer parameters.
 
+### Phase 8 — Voice-Based Mock Interview ✅
+- **Active Mock Session UI**: Designed immersive full-screen active interview view with glowing circular visualizers.
+- **Visualizer pulse**: Built infinite scale transitions mapping voice states (AI Speaking, Listening, Paused) to visual pulses.
+- **Timer & Progress**: Programmed active duration timers formatting minutes/seconds, alongside current question progress trackers (e.g. Question 2 of 5).
+- **Simulated speaking / listening loop**: Coded simulated speech streams feeding word-by-word transcription text to real-time speech preview panels.
+- **Session Controls**: Implemented floating controls for Pause, Resume, early Finish and Mute overrides.
+- **Report navigation**: Integrated navigation triggers to auto-pass data and redirect directly to the Report Screen on session completion.
+
 ---
 
 ## 7. Features To Be Built (Future Phases)
-
-### Phase 8 — Voice-Based Mock Interview
-- Android Speech Recognition (Speech-to-Text) for user answers
-- Android Text-to-Speech for AI interviewer voice
-- Real-time conversation flow: AI asks → user speaks → AI listens → AI follows up
-- Adaptive follow-up questions based on answer quality and depth
-- Interview timer and progress tracking
-- Pause/resume interview session
 
 ### Phase 9 — AI Evaluation
 - Send complete interview transcript to Gemini API for evaluation
