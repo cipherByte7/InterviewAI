@@ -80,7 +80,8 @@ app/src/main/java/com/example/interview_ai/
 │   ├── datastore/                  # (empty) Future: DataStore preferences
 │   ├── model/
 │   │   ├── User.kt                # User data class (id, name, email, targetRole)
-│   │   └── AuthUiState.kt         # UI state for auth screens (inputs, errors, loading)
+│   │   ├── AuthUiState.kt         # UI state for auth screens (inputs, errors, loading)
+│   │   └── DashboardUiState.kt    # UI state for dashboard metrics and session data
 │   ├── remote/                     # (empty) Future: Remote data source implementations
 │   └── repository/                 # (empty) Future: Repository pattern implementations
 │
@@ -111,7 +112,7 @@ app/src/main/java/com/example/interview_ai/
 │       │   ├── LoginScreen.kt     # Login form (email, password, validation, SHOW/HIDE toggle, forgot password link)
 │       │   └── RegisterScreen.kt  # Registration form (full name, target role, email, password)
 │       ├── dashboard/
-│       │   └── DashboardScreen.kt # (placeholder) Future: Main hub with stats, quick actions, recent activity
+│       │   └── DashboardScreen.kt # Main hub screen displaying metrics and launching mocks
 │       ├── interview/
 │       │   └── InterviewScreen.kt # (placeholder) Future: Voice-based AI mock interview
 │       ├── report/
@@ -124,7 +125,8 @@ app/src/main/java/com/example/interview_ai/
 ├── utils/                          # (empty) Future: Helper functions, extensions, constants
 │
 └── viewmodel/
-    └── AuthViewModel.kt           # Manages auth state, input validation, login/register logic (currently simulated)
+    ├── AuthViewModel.kt           # Manages auth state, input validation, login/register logic (currently simulated)
+    └── DashboardViewModel.kt      # Manages dashboard statistics, metrics loading, and history activity
 ```
 
 ### Resource Files
@@ -223,16 +225,18 @@ app/src/main/res/
   - On successful register → navigates to Dashboard
 - **NavGraph Updated**: `AuthViewModel` instantiated at NavGraph level and shared between Login and Register screens
 
+### Phase 4 — Dashboard ✅
+- **UI Architecture**: Implemented custom home layout with a Radial Glow brush background in dark theme.
+- **Greeting & Roles**: Welcome greeting displaying user's first name with a custom Target Role border badge.
+- **Readiness progress bar**: Dynamic `LinearProgressIndicator` showing total Readiness score (e.g. 84%) with action helper notes.
+- **Summary Cards**: Stats overview displaying total completed sessions (12) and total practice hours (4.5h).
+- **Quick Action Triggers**: Highly styled clickable cards for launching "Interactive AI Interview" and "Upload Resume".
+- **Activity Feed**: Interactive list of recent sessions displaying role titles, date details, and custom colored score badges (Success/Warning/Error) for status.
+- **Central Navigation**: Customized Bottom Navigation Bar (Home, History, Profile) with active indicator highlights.
+
 ---
 
 ## 7. Features To Be Built (Future Phases)
-
-### Phase 4 — Dashboard
-- Greeting header with user name and target role badge
-- Interview readiness score card with visual progress indicator
-- Quick action cards: "Start Mock Interview", "Upload Resume"
-- Recent interview activity list showing past session scores and dates
-- Bottom navigation bar (Dashboard, History, Profile)
 
 ### Phase 5 — Resume Upload
 - PDF file picker using Android Storage Access Framework
