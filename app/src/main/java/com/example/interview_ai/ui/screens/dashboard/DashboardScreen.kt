@@ -10,6 +10,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -82,7 +84,7 @@ import com.example.interview_ai.ui.components.SurfaceCard
 import com.example.interview_ai.ui.navigation.Routes
 import com.example.interview_ai.viewmodel.DashboardViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun DashboardScreen(
     navController: NavHostController,
@@ -416,6 +418,119 @@ fun DashboardScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = if (uiState.uploadedResumeName != null) AccentCyan else TextMuted
                         )
+                    }
+                }
+            }
+
+            if (uiState.isParsing) {
+                Spacer(modifier = Modifier.height(AppSpacing.md))
+                SurfaceCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    borderColor = AccentCyan,
+                    padding = AppSpacing.lg
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = AccentCyan,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(AppSpacing.md))
+                        Text(
+                            text = "AI parser extracting skills & role from resume...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextPrimary
+                        )
+                    }
+                }
+            }
+
+            uiState.parsedResume?.let { parsed ->
+                Spacer(modifier = Modifier.height(AppSpacing.md))
+                SurfaceCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    borderColor = if (parsed.isConfirmed) Success else Primary,
+                    padding = AppSpacing.lg
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (parsed.isConfirmed) "✓ Profile Synchronized" else "AI Parsed Profile",
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                color = if (parsed.isConfirmed) Success else Primary
+                            )
+                            if (!parsed.isConfirmed) {
+                                Box(
+                                    modifier = Modifier
+                                        .background(Warning.copy(alpha = 0.2f), RoundedCornerShape(AppRadius.full))
+                                        .border(1.dp, Warning, RoundedCornerShape(AppRadius.full))
+                                        .padding(horizontal = AppSpacing.sm, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "Pending Verify",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                        color = Warning
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(AppSpacing.md))
+
+                        Text(
+                            text = "Extracted Role: ${parsed.parsedRole}",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Experience: ${parsed.experienceYears} Years | Education: ${parsed.education}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+
+                        Spacer(modifier = Modifier.height(AppSpacing.md))
+                        Text(
+                            text = "Extracted Skills:",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextMuted
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
+                            verticalArrangement = Arrangement.spacedBy(AppSpacing.xs),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            parsed.skills.forEach { skill ->
+                                Box(
+                                    modifier = Modifier
+                                        .background(SurfaceVariantDark, RoundedCornerShape(4.dp))
+                                        .border(1.dp, BorderSubtle, RoundedCornerShape(4.dp))
+                                        .padding(horizontal = AppSpacing.sm, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = skill,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+                        }
+
+                        if (!parsed.isConfirmed) {
+                            Spacer(modifier = Modifier.height(AppSpacing.lg))
+                            com.example.interview_ai.ui.components.PrimaryButton(
+                                text = "Verify & Tailor Mock Questions",
+                                onClick = { viewModel.confirmParsedResume() }
+                            )
+                        }
                     }
                 }
             }

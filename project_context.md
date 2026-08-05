@@ -81,7 +81,8 @@ app/src/main/java/com/example/interview_ai/
 │   ├── model/
 │   │   ├── User.kt                # User data class (id, name, email, targetRole)
 │   │   ├── AuthUiState.kt         # UI state for auth screens (inputs, errors, loading)
-│   │   └── DashboardUiState.kt    # UI state for dashboard metrics and session data
+│   │   ├── DashboardUiState.kt    # UI state for dashboard metrics and session data
+│   │   └── ParsedResume.kt        # Structured parsed resume data model (skills, role, exp)
 │   ├── remote/                     # (empty) Future: Remote data source implementations
 │   └── repository/                 # (empty) Future: Repository pattern implementations
 │
@@ -241,15 +242,16 @@ app/src/main/res/
 - **Upload simulator**: Built ViewModel progress emitter showing simulated progress animations up to 100% completion.
 - **State updates**: Dynamically highlighted the Dashboard Resume card with cyan borders when active, displaying file details and providing click-to-delete actions.
 
+### Phase 6 — Resume Parsing ✅
+- **Data Models**: Created [ParsedResume.kt](file:///d:/kotlin/InterviewAI/app/src/main/java/com/example/interview_ai/data/model/ParsedResume.kt) to map structured skills, experience level, education details, and project count.
+- **Parsing triggers**: Configured ViewModel flow to automatically trigger asynchronous parsing immediately upon successful file upload.
+- **Progress indicator**: Designed dynamic progress loader card displayed while parsing is active.
+- **Interactive Review Card**: Implemented a profile review card displaying extracted role, education, experience years, and skill tags inside a custom M3 `FlowRow`.
+- **Handoff verification**: Enabled user verification action which updates target role configurations dynamically across the app.
+
 ---
 
 ## 7. Features To Be Built (Future Phases)
-
-### Phase 6 — Resume Parsing
-- Send uploaded PDF to backend or Gemini API for text extraction
-- Parse extracted text to identify: skills, experience, education, projects
-- Display parsed resume summary to user for confirmation
-- Store structured resume data for question generation
 
 ### Phase 7 — AI Question Generation
 - Integrate Gemini API

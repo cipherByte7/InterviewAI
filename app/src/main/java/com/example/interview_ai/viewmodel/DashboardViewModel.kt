@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.interview_ai.data.model.DashboardUiState
 import com.example.interview_ai.data.model.InterviewSession
+import com.example.interview_ai.data.model.ParsedResume
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,7 +50,8 @@ class DashboardViewModel : ViewModel() {
                 it.copy(
                     isUploading = true,
                     uploadProgress = 0.0f,
-                    uploadedResumeName = null
+                    uploadedResumeName = null,
+                    parsedResume = null
                 )
             }
             
@@ -68,6 +70,40 @@ class DashboardViewModel : ViewModel() {
                     uploadProgress = 1.0f
                 )
             }
+
+            // Immediately trigger parsing once upload is completed
+            parseResume()
+        }
+    }
+
+    private fun parseResume() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isParsing = true) }
+            delay(1500) // Simulate AI parsing delay
+            
+            _uiState.update {
+                it.copy(
+                    isParsing = false,
+                    parsedResume = ParsedResume(
+                        parsedRole = "Senior Android Dev",
+                        experienceYears = 3,
+                        skills = listOf("Kotlin", "Jetpack Compose", "Coroutines", "Dagger Hilt", "Clean Architecture"),
+                        education = "B.Tech in Computer Science",
+                        projectsCount = 4,
+                        isConfirmed = false
+                    )
+                )
+            }
+        }
+    }
+
+    fun confirmParsedResume() {
+        _uiState.update { state ->
+            val updatedResume = state.parsedResume?.copy(isConfirmed = true)
+            state.copy(
+                parsedResume = updatedResume,
+                targetRole = updatedResume?.parsedRole ?: state.targetRole
+            )
         }
     }
 
@@ -76,7 +112,9 @@ class DashboardViewModel : ViewModel() {
             it.copy(
                 uploadedResumeName = null,
                 uploadProgress = 0f,
-                isUploading = false
+                isUploading = false,
+                isParsing = false,
+                parsedResume = null
             )
         }
     }

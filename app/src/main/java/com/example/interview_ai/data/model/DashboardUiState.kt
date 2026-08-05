@@ -17,5 +17,7 @@ data class DashboardUiState(
     val isLoading: Boolean = false,
     val uploadedResumeName: String? = null,
     val uploadProgress: Float = 0f,
-    val isUploading: Boolean = false
+    val isUploading: Boolean = false,
+    val isParsing: Boolean = false,
+    val parsedResume: ParsedResume? = null
 )
