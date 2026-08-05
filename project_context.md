@@ -44,95 +44,100 @@ The UI is designed to feel like **ChatGPT, Linear, Notion, Cursor, or Perplexity
 ## 3. Tech Stack
 
 ### Currently Used
-| Layer | Technology |
-|-------|------------|
-| Language | Kotlin |
-| UI | Jetpack Compose |
-| Design System | Material 3 (custom dark theme) |
-| Architecture | MVVM |
-| Navigation | Navigation Compose (string-based routes) |
-| State Management | StateFlow + ViewModel |
-| Build System | Gradle (Kotlin DSL) with Version Catalog |
-| Font | Inter (Regular, Medium, SemiBold, Bold) — bundled as TTF in `res/font/` |
-
-### Planned (Not Yet Integrated)
 | Layer | Technology | Purpose |
 |-------|------------|---------|
-| Dependency Injection | Hilt | Scoped dependency management |
-| Networking | Retrofit | REST API calls to Node.js backend |
-| Local Storage | DataStore | Persist auth tokens and user preferences |
-| AI | Gemini API | Resume analysis, question generation, evaluation |
-| Voice Input | Android Speech Recognition | Convert user speech to text during mock interviews |
-| Voice Output | Android Text-to-Speech | AI interviewer reads questions aloud |
-| Backend | Node.js + Express + MongoDB | User auth, resume storage, session history |
+| Language | Kotlin | Android client-side coding |
+| UI | Jetpack Compose | Modern declarative screen composable layers |
+| Design System | Material 3 (custom dark theme) | Sleek dark theme tokens mapping |
+| Navigation | Navigation Compose | Centralized routing paths |
+| Networking | Retrofit + OkHttp | REST API call triggers to Node.js backend |
+| Local Storage | DataStore Preferences | Caching JWT tokens and active target roles |
+| Voice Synthesizing | Native Android TTS Engine | Reading mock questions to candidate |
+| Voice Recording | Native Android STT Engine | Capturing verbal speech to text transcript feeds |
+| Backend API | Node.js + Express | Routing auth endpoints and calling Gemini APIs |
+| Database | MongoDB | Storing user models and completed session evaluations |
+| Artificial Intelligence | Gemini API (Gemini 1.5 Flash) | Resume parsing, questions creator, transcript analysis |
 
 ---
 
 ## 4. Project Structure
 
+The codebase is organized into two primary root directories: `frontend/` (Android App) and `backend/` (Express API server).
+
+### Backend (NodeJS Server)
 ```
-app/src/main/java/com/example/interview_ai/
+backend/
+├── models/
+│   ├── User.js                     # MongoDB Mongoose User schema definition
+│   └── Report.js                   # MongoDB Mongoose AI Evaluation report schema
+├── middleware/
+│   └── auth.js                     # JWT token validation middleware interceptor
+├── package.json                    # Npm metadata and dependencies config
+├── .env                            # Host config parameters, Mongo URI, Gemini API Key
+└── server.js                       # Express routing and controller logic triggers
+```
+
+### Frontend (Android Application)
+```
+frontend/app/src/main/java/com/example/interview_ai/
 │
 ├── MainActivity.kt                 # Entry point, sets up theme and NavGraph
 │
 ├── data/
-│   ├── api/                        # (empty) Future: Retrofit API interface definitions
-│   ├── datastore/                  # (empty) Future: DataStore preferences
+│   ├── api/                        # Retrofit client and API interface endpoints
+│   ├── datastore/                  # Jetpack DataStore preferences caching sessions
 │   ├── model/
-│   │   ├── User.kt                # User data class (id, name, email, targetRole)
-│   │   ├── AuthUiState.kt         # UI state for auth screens (inputs, errors, loading)
-│   │   ├── DashboardUiState.kt    # UI state for dashboard metrics and session data
-│   │   ├── ParsedResume.kt        # Structured parsed resume data model (skills, role, exp)
-│   │   ├── Question.kt            # Structured question details (id, text, category)
-│   │   ├── InterviewUiState.kt    # UI state for interview config parameters
-│   │   └── EvaluationReport.kt    # Structured performance feedback report details
-│   ├── remote/                     # (empty) Future: Remote data source implementations
-│   └── repository/                 # (empty) Future: Repository pattern implementations
-│
-├── di/                             # (empty) Future: Hilt modules
+│   │   ├── User.kt                # User credentials data class
+│   │   ├── AuthUiState.kt         # UI state validation fields
+│   │   ├── DashboardUiState.kt    # Dashboard statistics counters
+│   │   ├── ParsedResume.kt        # Structured parsed resume tag models
+│   │   ├── Question.kt            # Tailored question structure details
+│   │   ├── InterviewUiState.kt    # Active voice interview configurations
+│   │   └── EvaluationReport.kt    # Performance scores metrics
 │
 ├── theme/
-│   ├── Color.kt                   # All color tokens (backgrounds, primary, accents, status, borders)
-│   ├── Dimensions.kt              # Spacing tokens (AppSpacing), corner radii (AppRadius), icon sizes (AppIconSize)
-│   ├── Theme.kt                   # InterviewAITheme composable — enforces dark scheme, sets status/nav bar colors
-│   └── Type.kt                    # Inter FontFamily definition + full Material 3 Typography scale
+│   ├── Color.kt                   # Theme colors
+│   ├── Dimensions.kt              # Spacing, padding, and corner radius tokens
+│   ├── Theme.kt                   # Material Theme colors mappings
+│   └── Type.kt                    # Inter Typography definitions
 │
 ├── ui/
 │   ├── components/
-│   │   ├── PrimaryButton.kt       # Main action button (indigo background, loading spinner, icon slots)
-│   │   ├── SecondaryButton.kt     # Outlined button (dark surface, subtle border)
-│   │   ├── AppTextField.kt        # Styled text input (label, placeholder, error message, leading/trailing icons)
-│   │   ├── SurfaceCard.kt         # Dark card container with subtle border (supports click)
-│   │   └── AppTopBar.kt           # Top app bar with back navigation, subtitle, and action slots
+│   │   ├── PrimaryButton.kt       # Premium primary actions indicator
+│   │   ├── SecondaryButton.kt     # Secondary custom boundary links
+│   │   ├── AppTextField.kt        # Custom text validator input layouts
+│   │   ├── SurfaceCard.kt         # Card containers
+│   │   └── AppTopBar.kt           # Central header elements
 │   │
 │   ├── navigation/
-│   │   ├── Routes.kt              # Sealed class defining all route strings (Splash, Login, Register, Dashboard, Interview, Report, History, Profile)
-│   │   └── NavGraph.kt            # Central NavHost composable wiring all screens
+│   │   ├── Routes.kt              # String route keys definitions
+│   │   └── NavGraph.kt            # Central NavHost transitions router
 │   │
 │   └── screens/
 │       ├── splash/
-│       │   └── SplashScreen.kt    # Animated splash with radial glow, scale/fade animation, auto-navigates to Login
+│       │   └── SplashScreen.kt    # Animated splash loader
 │       ├── auth/
-│       │   ├── LoginScreen.kt     # Login form (email, password, validation, SHOW/HIDE toggle, forgot password link)
-│       │   └── RegisterScreen.kt  # Registration form (full name, target role, email, password)
+│       │   ├── LoginScreen.kt     # Log-in email inputs form
+│       │   └── RegisterScreen.kt  # User sign-up roles form
 │       ├── dashboard/
-│       │   └── DashboardScreen.kt # Main hub screen displaying metrics and launching mocks
+│       │   └── DashboardScreen.kt # Home analytics board and file uploads sheet
 │       ├── interview/
-│       │   └── InterviewScreen.kt # (placeholder) Future: Voice-based AI mock interview
+│       │   └── InterviewScreen.kt # Prep details and active visualizer TTS/STT flows
 │       ├── report/
-│       │   └── ReportScreen.kt    # (placeholder) Future: Detailed performance report
-│       ├── history/
-│       │   └── HistoryScreen.kt   # (placeholder) Future: List of past interview sessions
-│       └── profile/
-│           └── ProfileScreen.kt   # (placeholder) Future: User profile and settings
+│       │   └── ReportScreen.kt    # Dimensions breakdown scores dashboard
+│       └── history/
+│           └── HistoryScreen.kt   # Previous sessions lists and search filters
 │
-├── utils/                          # (empty) Future: Helper functions, extensions, constants
+├── utils/
+│   ├── TextToSpeechEngine.kt       # Native TextToSpeech player wrapper
+│   └── SpeechToTextEngine.kt       # Native SpeechRecognizer recorders
 │
 └── viewmodel/
-    ├── AuthViewModel.kt           # Manages auth state, input validation, login/register logic (currently simulated)
-    ├── DashboardViewModel.kt      # Manages dashboard statistics, metrics loading, and history activity
-    ├── InterviewViewModel.kt      # Manages interview configurations and tailored questions list
-    └── ReportViewModel.kt         # Manages performance metrics loading and feedback details representation
+    ├── AuthViewModel.kt           # Controls user authentications and offline bypasses
+    ├── DashboardViewModel.kt      # Manages resume parsing and aggregate totals
+    ├── InterviewViewModel.kt      # Runs voice mock sessions and evaluations
+    ├── ReportViewModel.kt         # Retrieves latest report details
+    └── HistoryViewModel.kt        # Queries past reports arrays
 ```
 
 ### Resource Files
@@ -278,26 +283,12 @@ app/src/main/res/
 - **AI Action Plan block**: Styled a quotation panel highlighting specific custom improvement roadmaps.
 
 ### Phase 10 — Reports & History ✅
-- **Evaluation Dashboard**: Built comprehensive per-session performance reports tracking score breakdowns and insights (implemented in Phase 9).
-- **History Record List**: Designed History Screen layout listing past mock sessions with dynamic score indicators (Success/Warning/Error color bounds).
-- **Search capabilities**: Wired up real-time search queries filtering records by target role title matching.
-- **Horizontal Filter chips**: Integrated tag chips allowing quick filtering by session category focus (All, Technical, Behavioral).
-- **History ViewModel flow**: Implemented state handlers syncing search filters and loading simulated mock interview databases.
-
----
-
-## 7. Features To Be Built (Future Phases)
-
-### Additional Future Features (Post-MVP)
-- Real backend integration (Node.js + Express + MongoDB)
-- User authentication with JWT tokens
-- Hilt dependency injection
-- Retrofit for API networking
-- DataStore for local persistence (auth tokens, user preferences)
-- Profile screen with user details, resume management, and settings
-- Push notifications for practice reminders
-- Onboarding flow for first-time users
-- App icon and branding assets
+- **Evaluation Dashboard**: Built comprehensive per-session perfor## 7. Features Completed (Post-MVP Integrations) ✅
+- **Node.js Express Backend**: Fully operational HTTP REST API server running on port 5000 with MongoDB user data storage.
+- **Gemini API prompting**: Structured generative models parsing resumes, tailoring technical interview questions, and grading transcript evaluations.
+- **Retrofit Networking client**: Active authorization headers injection, mapping request payloads, and executing async API queries.
+- **Jetpack DataStore preferences**: Local user authentication JWT session storage and persistent profile management.
+- **Native Android voice speech**: Dynamic TTS audios reading questions and real-time partial voice STT transcript recordings.
 
 ---
 
@@ -324,23 +315,32 @@ These rules are enforced throughout the codebase and should be maintained by any
 - **AGP**: 8.11.1
 - **Kotlin**: 2.1.21
 - **Compose BOM**: 2025.06.01
-- **Navigation Compose**: 2.9.3 (hardcoded in `app/build.gradle.kts`, not in version catalog)
-- **Lifecycle Runtime KTX**: 2.9.1
-
-### Note for Future Contributors
-- The `navigation-compose` dependency is directly specified in `app/build.gradle.kts` (line 56) rather than through the version catalog. Consider migrating it to `libs.versions.toml` for consistency.
-- `Theme.kt` uses deprecated `window.statusBarColor` and `window.navigationBarColor` APIs. These work but will need migration to `enableEdgeToEdge()` approach in future Android SDK updates.
-- Authentication is currently **simulated** with a `delay()` — there is no real backend. The `login()` and `register()` functions in `AuthViewModel` return hardcoded mock data.
+- **Navigation Compose**: 2.9.3 (hardcoded in `app/build.gradle.kts`)
+- **Retrofit & OkHttp**: 2.11.0 / 4.12.0
+- **DataStore Preferences**: 1.1.1
 
 ---
 
 ## 10. How to Run
 
-1. Open the project in **Android Studio** (latest stable).
+### 1. Boot Backend Server
+1. Navigate to the `server/` directory:
+   ```bash
+   cd server
+   ```
+2. Configure your Gemini API Key in the `.env` file (`GEMINI_API_KEY=YOUR_KEY`).
+3. Install dependencies and start the Node.js server:
+   ```bash
+   npm install
+   npm start
+   ```
+4. The server launches on port 5000: `InterviewAI Server launched on port 5000`.
+
+### 2. Run Android App
+1. Open the project in **Android Studio**.
 2. Sync Gradle.
 3. Connect an Android device or start an emulator (API 24+).
-4. Run `app` configuration.
-5. The app launches with an animated splash screen → Login → (sign in) → Dashboard.
+4. Run `app` configuration. The app connects to the local Node.js server over the `10.0.2.2:5000` emulator network bridge.
 
 ---
 
@@ -350,9 +350,12 @@ These rules are enforced throughout the codebase and should be maintained by any
 App Launch
   └── SplashScreen (animated logo, 2-second delay)
         └── LoginScreen
-              ├── Sign In → Dashboard (placeholder)
-              └── Sign Up → RegisterScreen
-                              └── Create Account → Dashboard (placeholder)
+              ├── Sign In / Sign Up (authenticated via JWT tokens on NodeJS backend)
+              └── Dashboard
+                    ├── Resume Picker & Parser (AI skill tags rendering)
+                    ├── Session History (filter and search previous reports)
+                    └── Interview Setup
+                          └── Prep Screen (questions review list)
+                                └── Active Mock Interview (pulsing visualizer, TTS/STT speaking loops)
+                                      └── Evaluation Report Dashboard (score dimensions & action plans)
 ```
-
-Remaining screens (`Dashboard`, `Interview`, `Report`, `History`, `Profile`) are currently placeholder `Text()` composables that will be built in Phases 4–10.
