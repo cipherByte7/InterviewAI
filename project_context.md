@@ -84,7 +84,8 @@ app/src/main/java/com/example/interview_ai/
 │   │   ├── DashboardUiState.kt    # UI state for dashboard metrics and session data
 │   │   ├── ParsedResume.kt        # Structured parsed resume data model (skills, role, exp)
 │   │   ├── Question.kt            # Structured question details (id, text, category)
-│   │   └── InterviewUiState.kt    # UI state for interview config parameters
+│   │   ├── InterviewUiState.kt    # UI state for interview config parameters
+│   │   └── EvaluationReport.kt    # Structured performance feedback report details
 │   ├── remote/                     # (empty) Future: Remote data source implementations
 │   └── repository/                 # (empty) Future: Repository pattern implementations
 │
@@ -130,7 +131,8 @@ app/src/main/java/com/example/interview_ai/
 └── viewmodel/
     ├── AuthViewModel.kt           # Manages auth state, input validation, login/register logic (currently simulated)
     ├── DashboardViewModel.kt      # Manages dashboard statistics, metrics loading, and history activity
-    └── InterviewViewModel.kt      # Manages interview configurations and tailored questions list
+    ├── InterviewViewModel.kt      # Manages interview configurations and tailored questions list
+    └── ReportViewModel.kt         # Manages performance metrics loading and feedback details representation
 ```
 
 ### Resource Files
@@ -267,19 +269,17 @@ app/src/main/res/
 - **Session Controls**: Implemented floating controls for Pause, Resume, early Finish and Mute overrides.
 - **Report navigation**: Integrated navigation triggers to auto-pass data and redirect directly to the Report Screen on session completion.
 
+### Phase 9 — AI Evaluation ✅
+- **Evaluation Entities**: Created [EvaluationReport.kt](file:///d:/kotlin/InterviewAI/app/src/main/java/com/example/interview_ai/data/model/EvaluationReport.kt) modeling performance categories and structured suggestions.
+- **ViewModel evaluation loading**: Coded `ReportViewModel` state flow simulating asynchronous analytical delays before loading performance cards.
+- **Aesthetic Grade Header**: Implemented glowing grade ring container displaying overall scores (e.g. 86/100) and practice metadata.
+- **Score Dimension Cards**: Designed progress metrics for Technical Accuracy, Communication Clarity, Depth, and Confidence.
+- **Feedback Breakdown Panels**: Added bullet points isolating Key Strengths (success markers) and Areas of Improvement (warning icons).
+- **AI Action Plan block**: Styled a quotation panel highlighting specific custom improvement roadmaps.
+
 ---
 
 ## 7. Features To Be Built (Future Phases)
-
-### Phase 9 — AI Evaluation
-- Send complete interview transcript to Gemini API for evaluation
-- Score across multiple dimensions:
-  - Technical accuracy
-  - Communication clarity
-  - Depth of knowledge
-  - Confidence and articulation
-  - Relevance of answers
-- Generate strengths, weaknesses, and specific improvement suggestions
 
 ### Phase 10 — Reports & History
 - Detailed per-interview performance report screen
