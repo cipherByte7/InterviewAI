@@ -1,6 +1,6 @@
 # InterviewAI — Project Context & Handoff Document
 
-> **Last Updated**: August 5, 2026
+> **Last Updated**: August 6, 2026
 > **Platform**: Android (Native)
 > **Language**: Kotlin
 > **UI Framework**: Jetpack Compose + Material 3
@@ -67,14 +67,27 @@ The codebase is organized into two primary root directories: `frontend/` (Androi
 ### Backend (NodeJS Server)
 ```
 backend/
-├── models/
-│   ├── User.js                     # MongoDB Mongoose User schema definition
-│   └── Report.js                   # MongoDB Mongoose AI Evaluation report schema
+├── config/
+│   └── db.js                       # MongoDB connection & in-memory cache definitions
+├── controllers/
+│   ├── authController.js           # Auth handlers (login, register, logout, profile)
+│   ├── resumeController.js         # Resume parser handlers
+│   └── interviewController.js      # Questions generator and evaluation reports
 ├── middleware/
-│   └── auth.js                     # JWT token validation middleware interceptor
+│   └── auth.js                     # JWT verification & token blacklist interceptor
+├── models/
+│   ├── User.js                     # User database schema model
+│   └── Report.js                   # Evaluation report database schema model
+├── routes/
+│   ├── authRoutes.js               # Route maps for auth operations
+│   ├── userRoutes.js               # Route maps for user profiles
+│   ├── resumeRoutes.js             # Route maps for resume uploads
+│   └── interviewRoutes.js          # Route maps for question prep & mock evaluations
+├── services/
+│   └── geminiService.js            # Gemini 1.5 Flash API connector wrapper
 ├── package.json                    # Npm metadata and dependencies config
 ├── .env                            # Host config parameters, Mongo URI, Gemini API Key
-└── server.js                       # Express routing and controller logic triggers
+└── server.js                       # Clean, slim Express server entry point
 ```
 
 ### Frontend (Android Application)
@@ -125,6 +138,8 @@ frontend/app/src/main/java/com/example/interview_ai/
 │       │   └── InterviewScreen.kt # Prep details and active visualizer TTS/STT flows
 │       ├── report/
 │       │   └── ReportScreen.kt    # Dimensions breakdown scores dashboard
+│       ├── profile/
+│       │   └── ProfileScreen.kt   # Profile details, target roles editor, and sign-out controls
 │       └── history/
 │           └── HistoryScreen.kt   # Previous sessions lists and search filters
 │
@@ -133,7 +148,7 @@ frontend/app/src/main/java/com/example/interview_ai/
 │   └── SpeechToTextEngine.kt       # Native SpeechRecognizer recorders
 │
 └── viewmodel/
-    ├── AuthViewModel.kt           # Controls user authentications and offline bypasses
+    ├── AuthViewModel.kt           # Controls user authentication, login/register flows, and session management
     ├── DashboardViewModel.kt      # Manages resume parsing and aggregate totals
     ├── InterviewViewModel.kt      # Runs voice mock sessions and evaluations
     ├── ReportViewModel.kt         # Retrieves latest report details
@@ -282,13 +297,183 @@ app/src/main/res/
 - **Feedback Breakdown Panels**: Added bullet points isolating Key Strengths (success markers) and Areas of Improvement (warning icons).
 - **AI Action Plan block**: Styled a quotation panel highlighting specific custom improvement roadmaps.
 
-### Phase 10 — Reports & History ✅
-- **Evaluation Dashboard**: Built comprehensive per-session perfor## 7. Features Completed (Post-MVP Integrations) ✅
-- **Node.js Express Backend**: Fully operational HTTP REST API server running on port 5000 with MongoDB user data storage.
-- **Gemini API prompting**: Structured generative models parsing resumes, tailoring technical interview questions, and grading transcript evaluations.
-- **Retrofit Networking client**: Active authorization headers injection, mapping request payloads, and executing async API queries.
-- **Jetpack DataStore preferences**: Local user authentication JWT session storage and persistent profile management.
-- **Native Android voice speech**: Dynamic TTS audios reading questions and real-time partial voice STT transcript recordings.
+### Phase 10 — Production Polish & Handoff ✅
+- **Profile Screen**: Built custom profile credentials view, readiness statistics, parsed tags list, target roles editor, and sign-out controls (Phase 8 completion).
+- **Project Restructuring**: Organized workspace into separated `frontend/` (Android Compose app) and `backend/` (NodeJS REST API server) folders.
+- **Resilient Offline Bypass**: Implemented automated fallback loops to local mock data on database connect failures and request timeouts.
+- **GitHub Documentation**: Added root GitHub README documentation covering system architecture flows, setup guides, and feature highlights.
+
+### Milestone 11 — Schema Upgrade & Profile Persistence ✅
+- **Database Schema Upgrades**: Extended `User.js` database model schema to store persistent `parsedResume` details (extracted skills list, experience, and uploaded file metadata).
+- **PUT Target Role persistence**: Created `PUT /api/user/profile` endpoint on Express and connected it to Profile dialog saves to write role updates directly to MongoDB.
+- **Dynamic Stats Aggregation**: Refactored `GET /api/auth/user` to compute candidate statistics (total sessions count, overall average score, total practice hours) using server-side query calculations.
+- **Client Sync on Boot**: Programmed `DashboardViewModel` to parse user details, resume tags, and calculated stats directly from the network response on app launch.
+- **ParsedResume model extended**: Added `uploadedResumeName` field to `ParsedResume.kt` matching backend schema — compile verified BUILD SUCCESSFUL.
+
+### Milestone 12 — Resilient Speech Loop, Silence Detection & Permissions ✅
+- **STT Error Code Handling**: `startSpeechToTextListener()` in `InterviewViewModel.kt` now maps Android SpeechRecognizer error codes:
+  - Error 6 (No match) & Error 7 (Timeout) — **Silence detection**: auto-submits if transcript is non-empty, silently restarts listener otherwise.
+  - Error 8 (Recognizer busy) — stops, waits 300ms, then safely restarts.
+  - All other errors — transparent resilient restart while session is active.
+- **`submitUserAnswer()` decoupled from callback**: Session completion callback (`onSessionCompleted`) is stored once at session start, removing the bug where the auto-submit from STT timeout had no `onCompleted` lambda.
+- **`startInterviewSession(onCompleted)` upgraded**: Accepts the navigation lambda at session start and stores it — all code paths (normal submit, silence auto-submit, early finish) share one callback.
+- **Runtime Audio Permission flow**: `InterviewScreen.kt` now checks `RECORD_AUDIO` permission at composable init:
+  - If **granted**: starts session normally.
+  - If **denied**: prompts OS rationale dialog via `rememberLauncherForActivityResult`.
+  - If **denied during active session**: renders `PermissionDeniedContent` (info icon, explanation, and "Grant Permission" button) instead of the interview visualizer.
+- **`PermissionDeniedContent` composable**: Premium dark UI with icon, explanation text, and retry grant button.
+- All changes compile cleanly — **BUILD SUCCESSFUL in 14s**.
+
+---
+
+### Milestone 13 — Production Polish, Empty States & Error Handling ✅
+- **HistoryViewModel upgraded**:
+  - Added `isError: Boolean` and `errorMessage: String` to `HistoryUiState` — network failures now surface as real error states, not silent mock data fallbacks.
+  - Exposed `refresh()` function for retry triggers from the UI.
+- **HistoryScreen — 4 distinct states**:
+  - `isLoading` → `HistoryLoadingSkeleton`: 5-row shimmer skeleton with gradient-filled boxes matching actual list shapes.
+  - `isError` → `HistoryErrorContent`: Red radial glow icon, error heading, description, and "Retry" button wired to `viewModel.refresh()`.
+  - `sessions.isEmpty()` → `HistoryEmptyContent`: Indigo radial glow icon, motivational copy, and CTA "Start My First Interview" button navigating to Interview route.
+  - `filteredSessions.isEmpty()` → Search empty state with search icon and descriptive message.
+- **DashboardUiState extended**: Added `parseError: Boolean` and `parseErrorMessage: String` fields.
+- **DashboardViewModel — real PDF error handling**:
+  - `uploadResume()`: Sets `parseError=true` with user-friendly message when file bytes are empty/unreadable.
+  - `parseResume()`: Sets `parseError=true` with actionable message on API failure (password-protected, corrupted, unsupported format).
+- **DashboardScreen — Parse Error UI**: Red-bordered `SurfaceCard` with error icon, message, and "Remove & Try Again" action shown when `parseError=true`.
+- **AndroidManifest — permissions audit**:
+  - Added `READ_EXTERNAL_STORAGE` with `android:maxSdkVersion="32"` for Android 9–12 compatibility.
+  - `INTERNET` and `RECORD_AUDIO` confirmed and present.
+- All changes compile cleanly — **BUILD SUCCESSFUL in 15s**.
+
+---
+
+### Milestone 14 — Backend API Completion ✅
+
+Five previously missing backend endpoints added to [`server.js`](file:///d:/kotlin/InterviewAI/backend/server.js):
+
+#### `GET /api/interview/report/:id`
+- Fetches a **single evaluation report by its ID**, scoped to the authenticated user.
+- Works against both MongoDB (`Report.findOne`) and the in-memory fallback.
+- Returns 404 if the report doesn't belong to the requesting user.
+
+#### `PUT /api/resume/confirm`
+- Sets `parsedResume.isConfirmed = true` on the user document in MongoDB.
+- In-memory fallback mutates the `memoryUsers` array entry directly.
+- Returns the updated `parsedResume` object so the client can sync state without a separate fetch.
+
+#### `DELETE /api/resume`
+- Resets all `parsedResume` fields on the user document to empty defaults (blank strings, empty arrays, `isConfirmed: false`).
+- Clears the resume both from MongoDB and the in-memory fallback.
+- Returns a success confirmation message.
+
+#### `POST /api/auth/logout`
+- Adds the presented Bearer token to an in-memory **token blacklist** (`Set`).
+- The `auth.js` middleware was upgraded with a `setBlacklistProvider()` hook so the blacklist is checked on every protected route — rejected with a 401 if the token was previously invalidated.
+- Production note: replace the `Set` with Redis for persistence across server restarts.
+
+#### `POST /api/auth/refresh`
+- Accepts a valid (non-blacklisted) Bearer token and issues a **fresh 7-day JWT** for the same user.
+- Looks up the user from MongoDB or in-memory store to confirm existence before issuing.
+- Returns the new `token` + basic user payload so the client can swap it in DataStore seamlessly.
+
+#### `middleware/auth.js` upgraded
+- Added `setBlacklistProvider(fn)` export so `server.js` can register the shared `tokenBlacklist` Set.
+- Every incoming authenticated request now checks the blacklist before proceeding.
+
+### Milestone 15 — Authentication Polish & Session Handling ✅
+
+- **Instant Offline/Unresponsive Logout**:
+  - The logout mechanism in `AuthViewModel.kt` was refactored. The API call is now dispatched asynchronously in the background.
+  - Local credentials, session tokens, and cached DataStore parameters are cleared instantaneously on the main thread, routing the user to the Login screen immediately without waiting for a server round-trip.
+- **Auto-Login Redirection**:
+  - Integrated `LaunchedEffect` in `LoginScreen.kt` observing `uiState.isAuthenticated` status.
+  - If a cached session is loaded successfully during application boot, the user is automatically redirected to the `Dashboard` screen rather than getting stuck on the login input form.
+- **HTTP Exception Error Parsing & Validation**:
+  - Refactored `login` and `register` error handling in `AuthViewModel.kt` to explicitly catch `retrofit2.HttpException`.
+  - Added JSON parsing to extract backend-returned validation messages (e.g., "Invalid credentials" or "User already exists").
+  - Prevented incorrect auto-fallbacks to offline mode when the server has rejected credentials.
+
+---
+
+### Milestone 16 — Backend Modularization & Refactoring ✅
+
+- **Split monolithic `server.js` into clean, MVC-compliant directories**:
+  - `config/db.js`: Isolates database connection settings and exports in-memory DB fallbacks.
+  - `services/geminiService.js`: Encapsulates Gemini generative AI client routines.
+  - `controllers/`: Created `authController.js`, `resumeController.js`, and `interviewController.js` to manage request/response handlers separately.
+  - `routes/`: Standardized routes configuration inside `authRoutes.js`, `userRoutes.js`, `resumeRoutes.js`, and `interviewRoutes.js`.
+  - `server.js`: Cleaned to act solely as the app entry point config.
+- Verified server launches and binds to port 5000 with zero syntax errors.
+
+---
+
+### Milestone 17 — Evaluation Page Refresh & API Robustness ✅
+
+- **Auto-Refresh on Navigation**:
+  - Integrated `LaunchedEffect(Unit)` in [`ReportScreen.kt`](file:///d:/kotlin/InterviewAI/frontend/app/src/main/java/com/example/interview_ai/ui/screens/report/ReportScreen.kt) to dispatch `loadEvaluationReport()` whenever the destination is opened. 
+  - This solves the static caching bug where returning to the evaluation screen showed cached performance data from previous mock loops instead of the newly graded transcript.
+- **Dynamic Performance Verdicts**:
+  - Replaced the hardcoded static verdict string with conditional statements that evaluate the overall score (e.g., exceptional status for >= 85, active action plan details for 70-85, and needs practice directives for under 70).
+- **Gson Deserialization Safeguards**:
+  - Changed API response definitions of `confirmResume`, `deleteResume`, and `logout` inside [`InterviewApiService.kt`](file:///d:/kotlin/InterviewAI/frontend/app/src/main/java/com/example/interview_ai/data/api/InterviewApiService.kt) to return `okhttp3.ResponseBody`. This prevents Gson deserialization crashes from unstructured plain string responses.
+
+---
+
+### Milestone 18 — Adaptive Voice Interview Redesign ✅
+
+Complete architectural overhaul of the mock interview experience from a static question-list format to a **real-time, voice-driven, adaptive AI interviewer**.
+
+#### New Interview Workflow
+```
+Dashboard → Upload Resume → Start Interview
+  → AI Greeting (TTS)
+    → AI Asks First Question (generated from resume via Gemini)
+      → User Speaks Answer (STT captures in real-time)
+        → 5-second Silence Detected → Auto-Submit Answer
+          → Gemini Evaluates Answer & Generates Adaptive Follow-Up
+            → Loop (5–10 questions)
+              → Final Evaluation → Report Screen
+```
+
+#### Backend — New Adaptive Endpoints
+- **`POST /api/interview/start`**: Accepts `resumeText` and `targetRole`. Gemini generates the **first interview question** tailored to the candidate's resume and target position. Returns `{ sessionId, question, questionNumber, totalQuestions }`.
+- **`POST /api/interview/next-question`**: Accepts the full `conversationHistory` (previous questions + answers). Gemini analyzes depth, coverage gaps, and technical accuracy to generate the **next adaptive follow-up question**. Returns `{ question, questionNumber, totalQuestions, isComplete }`.
+- **`POST /api/interview/evaluate`**: Accepts the complete conversation transcript. Gemini produces a multi-dimensional evaluation report with scores, strengths, weaknesses, and an action plan. The report is saved to MongoDB.
+- Removed deprecated **`POST /api/interview/generate`** endpoint (predefined question lists).
+
+#### Frontend — State Machine Architecture
+- **`InterviewState` enum** in [`InterviewUiState.kt`](file:///d:/kotlin/InterviewAI/frontend/app/src/main/java/com/example/interview_ai/data/model/InterviewUiState.kt):
+  - `IDLE` → `GREETING` → `AI_SPEAKING` → `LISTENING` → `SILENCE_DETECTION` → `PROCESSING` → `AI_THINKING` → loop or `COMPLETED`
+- **[`InterviewViewModel.kt`](file:///d:/kotlin/InterviewAI/frontend/app/src/main/java/com/example/interview_ai/viewmodel/InterviewViewModel.kt)** rewritten:
+  - Coroutine-based 5-second silence debouncer: every partial STT transcription resets a countdown. When 5 seconds of silence pass, the answer is auto-submitted without any button press.
+  - State-driven loop cycles through TTS playback → STT recording → API submission → next question fetch.
+  - Conversation history maintained in-memory for Gemini context.
+- **[`InterviewScreen.kt`](file:///d:/kotlin/InterviewAI/frontend/app/src/main/java/com/example/interview_ai/ui/screens/interview/InterviewScreen.kt)** redesigned:
+  - Removed question card lists and chat bubbles.
+  - Central glowing audio visualizer orb with state-dependent colors (Indigo = AI speaking, Green = listening, Amber = silence detection, Teal = thinking).
+  - Live transcript preview showing real-time STT output.
+  - Progress indicators and session timer.
+- **[`InterviewApiService.kt`](file:///d:/kotlin/InterviewAI/frontend/app/src/main/java/com/example/interview_ai/data/api/InterviewApiService.kt)** updated:
+  - Added `StartInterviewRequest`, `StartInterviewResponse`, `NextQuestionRequest`, `NextQuestionResponse`, `ConversationItem` DTOs.
+  - Removed deprecated `GenerateQuestionsRequest` model.
+
+#### Backend — Service Layer
+- **[`geminiService.js`](file:///d:/kotlin/InterviewAI/backend/services/geminiService.js)** extended with:
+  - `generateFirstQuestionWithAI(resumeText, targetRole)` — prompts Gemini to craft an opening interview question.
+  - `generateNextQuestionWithAI(conversationHistory, resumeText, targetRole)` — prompts Gemini with full conversation context for adaptive follow-ups.
+  - All AI calls wrapped in try-catch with graceful fallback questions.
+
+---
+
+### Milestone 19 — Authentication Security Fix ✅
+
+- **Removed Offline Authentication Bypass**:
+  - Both `login()` and `register()` in [`AuthViewModel.kt`](file:///d:/kotlin/InterviewAI/frontend/app/src/main/java/com/example/interview_ai/viewmodel/AuthViewModel.kt) previously had an "offline fallback" that silently created a fake `User(id = "offline_user")` and granted full app access whenever the backend server was unreachable.
+  - This meant **any email/password combination would successfully log in** if the server was down — a critical security flaw.
+  - **Fix**: Removed the offline fallback entirely. Non-HTTP exceptions (connection timeouts, server unreachable) now display: *"Unable to connect to server. Please check your internet connection and try again."* without granting access.
+- **Backend Auth Verification** (already correct, confirmed):
+  - `POST /api/auth/login`: Checks user existence via `User.findOne({ email })`, validates password with `bcrypt.compare()`, returns 400 with specific error messages on failure.
+  - `POST /api/auth/register`: Checks for duplicate emails before creating user, hashes password with `bcrypt.genSalt(10)`.
 
 ---
 
@@ -349,13 +534,15 @@ These rules are enforced throughout the codebase and should be maintained by any
 ```
 App Launch
   └── SplashScreen (animated logo, 2-second delay)
-        └── LoginScreen
-              ├── Sign In / Sign Up (authenticated via JWT tokens on NodeJS backend)
+        └── LoginScreen (JWT auth required — no offline bypass)
+              ├── Sign In / Sign Up (bcrypt password validation on NodeJS backend)
               └── Dashboard
                     ├── Resume Picker & Parser (AI skill tags rendering)
                     ├── Session History (filter and search previous reports)
-                    └── Interview Setup
-                          └── Prep Screen (questions review list)
-                                └── Active Mock Interview (pulsing visualizer, TTS/STT speaking loops)
-                                      └── Evaluation Report Dashboard (score dimensions & action plans)
+                    └── Start Mock Interview
+                          └── Voice Interview Session (adaptive AI interviewer)
+                                ├── AI asks questions via TTS (generated by Gemini from resume)
+                                ├── User speaks answers via STT (5-second silence auto-submit)
+                                ├── Gemini generates adaptive follow-up questions
+                                └── Session Complete → Evaluation Report (score dimensions & action plans)
 ```

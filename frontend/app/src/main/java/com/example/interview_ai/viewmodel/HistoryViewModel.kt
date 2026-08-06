@@ -15,7 +15,9 @@ data class HistoryUiState(
     val filteredSessions: List<InterviewSession> = emptyList(),
     val searchQuery: String = "",
     val selectedFilter: String = "All", // All, Technical, Behavioral
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val isError: Boolean = false,
+    val errorMessage: String = ""
 )
 
 class HistoryViewModel : ViewModel() {
@@ -29,7 +31,7 @@ class HistoryViewModel : ViewModel() {
 
     fun loadHistorySessions() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isLoading = true, isError = false, errorMessage = "") }
             try {
                 // Query server API for all past sessions
                 val reports = RetrofitClient.apiService.getHistory()
@@ -50,24 +52,19 @@ class HistoryViewModel : ViewModel() {
                     )
                 }
             } catch (e: Exception) {
-                // Fallback offline mock list on network connection failure
-                val dummySessions = listOf(
-                    InterviewSession("1", "Android Developer (L4)", "Aug 04, 2026", 88),
-                    InterviewSession("2", "Kotlin Backend Developer", "Aug 01, 2026", 76),
-                    InterviewSession("3", "Mobile Engineer Intern", "Jul 28, 2026", 92),
-                    InterviewSession("4", "Senior Java Engineer", "Jul 15, 2026", 64),
-                    InterviewSession("5", "Behavioral Mock Session", "Jul 10, 2026", 85)
-                )
-
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        sessions = dummySessions,
-                        filteredSessions = dummySessions
+                        isError = true,
+                        errorMessage = e.message ?: "Unable to reach server"
                     )
                 }
             }
         }
+    }
+
+    fun refresh() {
+        loadHistorySessions()
     }
 
     fun onSearchQueryChanged(query: String) {

@@ -26,36 +26,36 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.ui.draw.scale
-import com.example.interview_ai.data.model.Question
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.interview_ai.data.model.InterviewStatus
+import com.example.interview_ai.data.model.InterviewState
 import com.example.interview_ai.theme.AccentCyan
 import com.example.interview_ai.theme.AppRadius
 import com.example.interview_ai.theme.AppSpacing
@@ -91,19 +91,36 @@ fun InterviewScreen(
     val skills = dashState.parsedResume?.skills ?: emptyList()
     val resumeName = dashState.uploadedResumeName
 
+    val context = LocalContext.current
+    var hasAudioPermission by remember {
+        mutableStateOf(
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.RECORD_AUDIO
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasAudioPermission = isGranted
+        if (isGranted) {
+            interviewViewModel.startInterviewSession(targetRole, skills) {
+                navController.navigate(com.example.interview_ai.ui.navigation.Routes.Report.route) {
+                    popUpTo(com.example.interview_ai.ui.navigation.Routes.Interview.route) { inclusive = true }
+                }
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
-            if (uiState.status != InterviewStatus.GENERATING && uiState.status != InterviewStatus.ACTIVE) {
+            if (uiState.status == InterviewStatus.CONFIGURING) {
                 AppTopBar(
-                    title = if (uiState.status == InterviewStatus.READY) "Review Mock Prep" else "Configure AI Session",
-                    subtitle = if (uiState.status == InterviewStatus.READY) " tailor-made interview questions" else "Setup mock interview parameters",
-                    onBackClick = {
-                        if (uiState.status == InterviewStatus.READY) {
-                            interviewViewModel.resetInterview()
-                        } else {
-                            navController.popBackStack()
-                        }
-                    }
+                    title = "Configure AI Session",
+                    subtitle = "Setup mock interview parameters",
+                    onBackClick = { navController.popBackStack() }
                 )
             }
         },
@@ -135,45 +152,40 @@ fun InterviewScreen(
                         onDifficultyChange = { interviewViewModel.setDifficulty(it) },
                         onCategoryChange = { interviewViewModel.setCategory(it) },
                         onCountChange = { interviewViewModel.setQuestionCount(it) },
-                        onGenerate = { interviewViewModel.generateQuestions(targetRole, skills) }
-                    )
-                }
-                InterviewStatus.GENERATING -> {
-                    GeneratingContent(progress = uiState.generationProgress)
-                }
-                InterviewStatus.READY -> {
-                    ReadyContent(
-                        questions = uiState.generatedQuestions,
-                        role = targetRole,
-                        difficulty = uiState.selectedDifficulty,
-                        onReconfigure = { interviewViewModel.resetInterview() },
-                        onStart = {
-                            interviewViewModel.startInterviewSession()
+                        onGenerate = {
+                            if (hasAudioPermission) {
+                                interviewViewModel.startInterviewSession(targetRole, skills) {
+                                    navController.navigate(com.example.interview_ai.ui.navigation.Routes.Report.route) {
+                                        popUpTo(com.example.interview_ai.ui.navigation.Routes.Interview.route) { inclusive = true }
+                                    }
+                                }
+                            } else {
+                                permissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                            }
                         }
                     )
                 }
                 InterviewStatus.ACTIVE -> {
-                    ActiveInterviewContent(
-                        uiState = uiState,
-                        onPauseToggle = { interviewViewModel.togglePause() },
-                        onSubmit = {
-                            interviewViewModel.submitUserAnswer {
-                                navController.navigate(com.example.interview_ai.ui.navigation.Routes.Report.route) {
-                                    popUpTo(com.example.interview_ai.ui.navigation.Routes.Interview.route) { inclusive = true }
+                    if (!hasAudioPermission) {
+                        PermissionDeniedContent(
+                            onRequestPermission = { permissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO) }
+                        )
+                    } else {
+                        ActiveInterviewContent(
+                            uiState = uiState,
+                            onPauseToggle = { interviewViewModel.togglePause() },
+                            onFinish = {
+                                interviewViewModel.finishInterview {
+                                    navController.navigate(com.example.interview_ai.ui.navigation.Routes.Report.route) {
+                                        popUpTo(com.example.interview_ai.ui.navigation.Routes.Interview.route) { inclusive = true }
+                                    }
                                 }
                             }
-                        },
-                        onFinish = {
-                            interviewViewModel.finishInterview {
-                                navController.navigate(com.example.interview_ai.ui.navigation.Routes.Report.route) {
-                                    popUpTo(com.example.interview_ai.ui.navigation.Routes.Interview.route) { inclusive = true }
-                                }
-                            }
-                        }
-                    )
+                        )
+                    }
                 }
                 else -> {
-                    // Completed screens
+                    // Completed state handled by navigation redirect
                 }
             }
         }
@@ -208,337 +220,176 @@ fun ConfiguringContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = "Resume context note",
+                    imageVector = Icons.Default.Star,
+                    contentDescription = "Resume Status",
                     tint = if (resumeName != null) AccentCyan else TextMuted,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(AppSpacing.md))
+                Column {
+                    Text(
+                        text = if (resumeName != null) "Resume Context Active" else "No Resume Uploaded",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = if (resumeName != null) "Adapting questions to $resumeName" else "Generate standard role-based mock questions",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextMuted
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(AppSpacing.lg))
+
+        // Target Role Card
+        SurfaceCard(
+            modifier = Modifier.fillMaxWidth(),
+            padding = AppSpacing.md
+        ) {
+            Column {
                 Text(
-                    text = if (resumeName != null) "Tailoring interview to active resume: $resumeName"
-                           else "General mode. Upload resume on Dashboard to unlock tailored questions.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (resumeName != null) TextPrimary else TextSecondary
+                    text = "TARGET ENGINEER ROLE",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = TextMuted
+                )
+                Spacer(modifier = Modifier.height(AppSpacing.xs))
+                Text(
+                    text = targetRole,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = TextPrimary
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(AppSpacing.xl))
-
-        // Target Role Preview Info
-        Text(
-            text = "Target Role",
-            style = MaterialTheme.typography.titleMedium,
-            color = TextPrimary
-        )
-        Spacer(modifier = Modifier.height(AppSpacing.xs))
-        Text(
-            text = targetRole,
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-            color = Primary
-        )
-
-        Spacer(modifier = Modifier.height(AppSpacing.xl))
-
-        // 1. Difficulty Level Option Group
-        Text(
-            text = "Experience Level",
-            style = MaterialTheme.typography.titleMedium,
-            color = TextPrimary
-        )
-        Spacer(modifier = Modifier.height(AppSpacing.sm))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)
-        ) {
-            val levels = listOf("Junior", "Mid-Level", "Senior")
-            levels.forEach { level ->
-                val isSelected = difficulty == level
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(
-                            color = if (isSelected) Primary.copy(alpha = 0.15f) else SurfaceDark,
-                            shape = RoundedCornerShape(AppRadius.md)
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = if (isSelected) Primary else BorderSubtle,
-                            shape = RoundedCornerShape(AppRadius.md)
-                        )
-                        .clickable { onDifficultyChange(level) }
-                        .padding(vertical = AppSpacing.md),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = level,
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        color = if (isSelected) TextPrimary else TextSecondary
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(AppSpacing.xl))
-
-        // 2. Question Category Option Group
-        Text(
-            text = "Interview Focus",
-            style = MaterialTheme.typography.titleMedium,
-            color = TextPrimary
-        )
-        Spacer(modifier = Modifier.height(AppSpacing.sm))
-        Column(
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)
-        ) {
-            val categories = listOf("Technical", "Behavioral", "Mixed (Tech + Behavioral)")
-            categories.forEach { cat ->
-                val label = cat.split(" ").first()
-                val isSelected = category == label
-                SurfaceCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onCategoryChange(label) },
-                    borderColor = if (isSelected) Primary else BorderSubtle,
-                    backgroundColor = if (isSelected) Primary.copy(alpha = 0.15f) else SurfaceDark,
-                    padding = AppSpacing.md
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = cat,
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                                color = if (isSelected) TextPrimary else TextSecondary
-                            )
-                        }
-                        if (isSelected) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = "Active Selection",
-                                tint = Primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(AppSpacing.xl))
-
-        // 3. Question Count Selection
-        Text(
-            text = "Session Length",
-            style = MaterialTheme.typography.titleMedium,
-            color = TextPrimary
-        )
-        Spacer(modifier = Modifier.height(AppSpacing.sm))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)
-        ) {
-            val counts = listOf(5, 10, 15)
-            counts.forEach { qCount ->
-                val isSelected = count == qCount
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .background(
-                            color = if (isSelected) Primary.copy(alpha = 0.15f) else SurfaceDark,
-                            shape = RoundedCornerShape(AppRadius.md)
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = if (isSelected) Primary else BorderSubtle,
-                            shape = RoundedCornerShape(AppRadius.md)
-                        )
-                        .clickable { onCountChange(qCount) }
-                        .padding(vertical = AppSpacing.md),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "$qCount Questions",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                        color = if (isSelected) TextPrimary else TextSecondary
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(AppSpacing.xxl))
-
-        PrimaryButton(
-            text = "Generate Tailored Questions",
-            onClick = onGenerate
-        )
-    }
-}
-
-@Composable
-fun GeneratingContent(progress: Float) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        // Glowing star emblem
-        Box(
-            modifier = Modifier
-                .size(80.dp)
-                .background(SurfaceVariantDark, CircleShape)
-                .border(
-                    width = 1.dp,
-                    brush = Brush.linearGradient(colors = listOf(Primary, AccentCyan)),
-                    shape = CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Star,
-                contentDescription = "AI Star icon",
-                tint = Primary,
-                modifier = Modifier.size(36.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(AppSpacing.xl))
-
-        Text(
-            text = "Tailoring Mock Questions",
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-            color = TextPrimary
-        )
-        Spacer(modifier = Modifier.height(AppSpacing.xs))
-        Text(
-            text = "Gemini is analyzing skills and setting difficulty...",
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextMuted
-        )
-
-        Spacer(modifier = Modifier.height(AppSpacing.xl))
-
-        LinearProgressIndicator(
-            progress = { progress },
-            modifier = Modifier
-                .fillMaxWidth(0.7f)
-                .height(6.dp),
-            color = Primary,
-            trackColor = BorderSubtle,
-            strokeCap = StrokeCap.Round
-        )
-        Spacer(modifier = Modifier.height(AppSpacing.sm))
-        Text(
-            text = "${(progress * 100).toInt()}% Generated",
-            style = MaterialTheme.typography.bodySmall,
-            color = TextSecondary
-        )
-    }
-}
-
-@Composable
-fun ReadyContent(
-    questions: List<Question>,
-    role: String,
-    difficulty: String,
-    onReconfigure: () -> Unit,
-    onStart: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(AppSpacing.lg)
-    ) {
-        Text(
-            text = "Tailored Questions Ready",
-            style = MaterialTheme.typography.titleMedium,
-            color = TextSecondary
-        )
-        Spacer(modifier = Modifier.height(AppSpacing.xs))
-        Text(
-            text = "$role ($difficulty)",
-            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-            color = TextPrimary
-        )
-
         Spacer(modifier = Modifier.height(AppSpacing.lg))
 
-        // Scrollable List of questions
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.md)
-        ) {
-            questions.forEach { q ->
-                SurfaceCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    padding = AppSpacing.md
-                ) {
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Question ${q.id}",
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = Primary
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .background(AccentCyan.copy(alpha = 0.15f), RoundedCornerShape(AppRadius.full))
-                                    .border(0.5.dp, AccentCyan, RoundedCornerShape(AppRadius.full))
-                                    .padding(horizontal = 8.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = q.category,
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                    color = AccentCyan
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(AppSpacing.sm))
-                        Text(
-                            text = q.text,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextPrimary,
-                            lineHeight = 22.sp
-                        )
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(AppSpacing.lg))
-
-        // Bottom Action buttons
+        // Category Selector Chips
+        Text(
+            text = "Interview Type Focus",
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+            color = TextPrimary
+        )
+        Spacer(modifier = Modifier.height(AppSpacing.sm))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(AppSpacing.md)
         ) {
-            SecondaryButton(
-                text = "Configure",
-                onClick = onReconfigure,
-                modifier = Modifier.weight(0.4f)
-            )
-            PrimaryButton(
-                text = "Start audio mock",
-                onClick = onStart,
-                modifier = Modifier.weight(0.6f),
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Launch Icon",
-                        tint = TextPrimary
+            listOf("Technical", "Behavioral", "Mixed").forEach { cat ->
+                val isSelected = cat == category
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(
+                            color = if (isSelected) Primary.copy(alpha = 0.15f) else SurfaceDark,
+                            shape = RoundedCornerShape(AppRadius.md)
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = if (isSelected) Primary else BorderSubtle,
+                            shape = RoundedCornerShape(AppRadius.md)
+                        )
+                        .clickable { onCategoryChange(cat) }
+                        .padding(vertical = AppSpacing.md),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = cat,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = if (isSelected) Primary else TextSecondary
                     )
                 }
-            )
+            }
         }
+
+        Spacer(modifier = Modifier.height(AppSpacing.lg))
+
+        // Difficulty Selector Chips
+        Text(
+            text = "Complexity Level",
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+            color = TextPrimary
+        )
+        Spacer(modifier = Modifier.height(AppSpacing.sm))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.md)
+        ) {
+            listOf("Junior", "Mid-Level", "Senior").forEach { diff ->
+                val isSelected = diff == difficulty
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(
+                            color = if (isSelected) Success.copy(alpha = 0.15f) else SurfaceDark,
+                            shape = RoundedCornerShape(AppRadius.md)
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = if (isSelected) Success else BorderSubtle,
+                            shape = RoundedCornerShape(AppRadius.md)
+                        )
+                        .clickable { onDifficultyChange(diff) }
+                        .padding(vertical = AppSpacing.md),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = diff,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = if (isSelected) Success else TextSecondary
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(AppSpacing.lg))
+
+        // Question count Selector Chips
+        Text(
+            text = "Adaptive Questions Limit",
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+            color = TextPrimary
+        )
+        Spacer(modifier = Modifier.height(AppSpacing.sm))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(AppSpacing.md)
+        ) {
+            listOf(3, 5, 8).forEach { cnt ->
+                val isSelected = cnt == count
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(
+                            color = if (isSelected) AccentCyan.copy(alpha = 0.15f) else SurfaceDark,
+                            shape = RoundedCornerShape(AppRadius.md)
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = if (isSelected) AccentCyan else BorderSubtle,
+                            shape = RoundedCornerShape(AppRadius.md)
+                        )
+                        .clickable { onCountChange(cnt) }
+                        .padding(vertical = AppSpacing.md),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "$cnt Questions",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = if (isSelected) AccentCyan else TextSecondary
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(36.dp))
+
+        PrimaryButton(
+            text = "Start Mock Interview",
+            onClick = onGenerate,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
@@ -546,13 +397,12 @@ fun ReadyContent(
 fun ActiveInterviewContent(
     uiState: com.example.interview_ai.data.model.InterviewUiState,
     onPauseToggle: () -> Unit,
-    onSubmit: () -> Unit,
     onFinish: () -> Unit
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = if (uiState.isAiSpeaking || uiState.isListening) 1.25f else 1f,
+        targetValue = if (uiState.interviewState == InterviewState.AI_SPEAKING || uiState.interviewState == InterviewState.LISTENING) 1.25f else 1.05f,
         animationSpec = infiniteRepeatable(
             animation = tween(1000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
@@ -563,6 +413,14 @@ fun ActiveInterviewContent(
     val minutes = uiState.sessionDurationSeconds / 60
     val seconds = uiState.sessionDurationSeconds % 60
     val timeFormatted = String.format("%02d:%02d", minutes, seconds)
+
+    val stateColor = when (uiState.interviewState) {
+        InterviewState.GREETING, InterviewState.AI_SPEAKING -> Primary
+        InterviewState.LISTENING -> Success
+        InterviewState.SILENCE_DETECTION -> Warning
+        InterviewState.PROCESSING, InterviewState.AI_THINKING -> AccentCyan
+        else -> BorderSubtle
+    }
 
     Column(
         modifier = Modifier
@@ -583,7 +441,7 @@ fun ActiveInterviewContent(
                     .padding(horizontal = AppSpacing.sm, vertical = 2.dp)
             ) {
                 Text(
-                    text = "Question ${uiState.currentQuestionIndex + 1} of ${uiState.selectedQuestionCount}",
+                    text = "Adaptive Session Mode",
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                     color = Primary
                 )
@@ -595,24 +453,22 @@ fun ActiveInterviewContent(
             )
         }
 
-        Spacer(modifier = Modifier.height(54.dp))
+        Spacer(modifier = Modifier.height(72.dp))
 
         // Pulsing audio visualizer orb
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(160.dp)
+            modifier = Modifier.size(200.dp)
         ) {
             // Pulse circle backdrop
             Box(
                 modifier = Modifier
-                    .size(120.dp)
+                    .size(150.dp)
                     .scale(pulseScale)
                     .background(
                         brush = Brush.radialGradient(
                             colors = listOf(
-                                if (uiState.isAiSpeaking) Primary.copy(alpha = 0.4f)
-                                else if (uiState.isListening) Success.copy(alpha = 0.4f)
-                                else BorderSubtle,
+                                stateColor.copy(alpha = 0.4f),
                                 Color.Transparent
                             )
                         ),
@@ -623,77 +479,49 @@ fun ActiveInterviewContent(
             // Core center orb
             Box(
                 modifier = Modifier
-                    .size(90.dp)
+                    .size(110.dp)
                     .background(SurfaceDark, CircleShape)
                     .border(
-                        width = 1.5.dp,
+                        width = 2.dp,
                         brush = Brush.linearGradient(
-                            colors = listOf(
-                                if (uiState.isAiSpeaking) Primary
-                                else if (uiState.isListening) Success
-                                else BorderSubtle,
-                                if (uiState.isAiSpeaking) AccentCyan
-                                else if (uiState.isListening) AccentCyan
-                                else BorderSubtle
-                            )
+                            colors = listOf(stateColor, AccentCyan)
                         ),
                         shape = CircleShape
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (uiState.isAiSpeaking) Icons.Default.Star
-                                  else if (uiState.isListening) Icons.Default.PlayArrow
-                                  else Icons.Default.Refresh,
+                    imageVector = when (uiState.interviewState) {
+                        InterviewState.LISTENING -> Icons.Default.PlayArrow
+                        InterviewState.SILENCE_DETECTION -> Icons.Default.Refresh
+                        else -> Icons.Default.Person
+                    },
                     contentDescription = "Status Icon",
-                    tint = if (uiState.isAiSpeaking) Primary
-                           else if (uiState.isListening) Success
-                           else TextMuted,
-                    modifier = Modifier.size(36.dp)
+                    tint = stateColor,
+                    modifier = Modifier.size(44.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(AppSpacing.lg))
+        Spacer(modifier = Modifier.height(28.dp))
 
         // Speaking / Listening status string
         Text(
             text = when {
                 uiState.isPaused -> "Interview Paused"
-                uiState.isAiSpeaking -> "AI Speaking..."
-                uiState.isListening -> "Listening to your answer..."
-                uiState.isThinking -> "AI analyzing response..."
+                uiState.interviewState == InterviewState.GREETING -> "🤖 AI greeting you..."
+                uiState.interviewState == InterviewState.AI_SPEAKING -> "🤖 AI speaking question..."
+                uiState.interviewState == InterviewState.LISTENING -> "🎤 Listening..."
+                uiState.interviewState == InterviewState.SILENCE_DETECTION -> "⏳ Processing silence..."
+                uiState.interviewState == InterviewState.PROCESSING -> "🤖 Submitting answer..."
+                uiState.interviewState == InterviewState.AI_THINKING -> "🤖 Analyzing your answer..."
                 else -> "Active Mock Session"
             },
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-            color = if (uiState.isListening) Success else if (uiState.isAiSpeaking) Primary else TextSecondary
+            color = stateColor
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Question display card
-        SurfaceCard(
-            modifier = Modifier.fillMaxWidth(),
-            borderColor = if (uiState.isAiSpeaking) Primary else BorderSubtle,
-            padding = AppSpacing.md
-        ) {
-            Column {
-                Text(
-                    text = "AI INTERVIEWER",
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = TextMuted
-                )
-                Spacer(modifier = Modifier.height(AppSpacing.xs))
-                Text(
-                    text = uiState.activeQuestionText,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = TextPrimary,
-                    lineHeight = 24.sp
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(AppSpacing.lg))
+        Spacer(modifier = Modifier.height(36.dp))
 
         // Real-time user speech recognition transcript preview
         SurfaceCard(
@@ -704,15 +532,22 @@ fun ActiveInterviewContent(
         ) {
             Column {
                 Text(
-                    text = "YOUR TRANSCRIPT (REAL-TIME)",
+                    text = "LIVE TRANSCRIPT",
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                     color = TextMuted
                 )
-                Spacer(modifier = Modifier.height(AppSpacing.xs))
+                Spacer(modifier = Modifier.height(AppSpacing.sm))
+                
+                val transcriptText = when (uiState.interviewState) {
+                    InterviewState.AI_THINKING -> "AI is preparing the next adaptive question based on your experience..."
+                    InterviewState.PROCESSING -> "Submitting transcript to Gemini evaluation engines..."
+                    else -> uiState.userTranscript.ifEmpty { "Answer naturally. Your transcribed words will display here..." }
+                }
+                
                 Text(
-                    text = uiState.userTranscript.ifEmpty { "Speech text will appear here as you answer..." },
+                    text = transcriptText,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (uiState.userTranscript.isEmpty()) TextMuted else TextPrimary,
+                    color = if (uiState.userTranscript.isEmpty() && uiState.interviewState != InterviewState.AI_THINKING && uiState.interviewState != InterviewState.PROCESSING) TextMuted else TextPrimary,
                     lineHeight = 22.sp
                 )
             }
@@ -739,20 +574,11 @@ fun ActiveInterviewContent(
                     )
                 }
             )
-
-            // Submit Answer button
-            PrimaryButton(
-                text = if (uiState.currentQuestionIndex + 1 == uiState.selectedQuestionCount) "Submit & Finish" else "Submit Answer",
-                onClick = onSubmit,
-                modifier = Modifier.weight(1.3f),
-                enabled = uiState.userTranscript.isNotEmpty() && !uiState.isAiSpeaking && !uiState.isPaused && !uiState.isThinking,
-                isLoading = uiState.isThinking
-            )
         }
 
         Spacer(modifier = Modifier.height(AppSpacing.sm))
 
-        // Early End session exit button
+        // Conclude interview Early exit trigger button
         Text(
             text = "End session early",
             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
@@ -760,6 +586,43 @@ fun ActiveInterviewContent(
             modifier = Modifier
                 .clickable { onFinish() }
                 .padding(AppSpacing.sm)
+        )
+    }
+}
+
+@Composable
+fun PermissionDeniedContent(onRequestPermission: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(AppSpacing.lg),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.Info,
+            contentDescription = "Microphone Required",
+            tint = MaterialTheme.colorScheme.error,
+            modifier = Modifier.size(64.dp)
+        )
+        Spacer(modifier = Modifier.height(AppSpacing.md))
+        Text(
+            text = "Microphone Access Required",
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            color = TextPrimary
+        )
+        Spacer(modifier = Modifier.height(AppSpacing.sm))
+        Text(
+            text = "InterviewAI conducts mock sessions using audio speech inputs. Please grant audio recording permissions to practice.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = TextSecondary,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(AppSpacing.lg))
+        PrimaryButton(
+            text = "Grant Permission",
+            onClick = onRequestPermission,
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }

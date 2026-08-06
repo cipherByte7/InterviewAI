@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -72,6 +73,10 @@ fun ReportScreen(
     viewModel: ReportViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadEvaluationReport()
+    }
 
     Scaffold(
         topBar = {
@@ -144,8 +149,15 @@ fun ReportScreen(
                                         color = TextMuted
                                     )
                                     Spacer(modifier = Modifier.height(AppSpacing.md))
+                                    
+                                    val verdictText = when {
+                                        report.overallScore >= 85 -> "Verdict: Exceptional performance. High readiness for core engineering questions."
+                                        report.overallScore >= 70 -> "Verdict: Good capability. Follow the Custom AI Action Plan to refine areas of improvement."
+                                        else -> "Verdict: Needs practice. Review technical definitions and mock interview patterns."
+                                    }
+                                    
                                     Text(
-                                        text = "Verdict: Strong technical concepts. Articulate speaking velocity to boost scores above 90%.",
+                                        text = verdictText,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = TextSecondary
                                     )

@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -61,6 +62,15 @@ fun LoginScreen(
     authViewModel: AuthViewModel
 ) {
     val uiState by authViewModel.uiState.collectAsState()
+
+    LaunchedEffect(uiState.isAuthenticated) {
+        if (uiState.isAuthenticated) {
+            println("LoginScreen: User is authenticated, auto-navigating to Dashboard...")
+            navController.navigate(Routes.Dashboard.route) {
+                popUpTo(Routes.Login.route) { inclusive = true }
+            }
+        }
+    }
 
     Box(
         modifier = Modifier

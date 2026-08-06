@@ -83,7 +83,7 @@ import com.example.interview_ai.theme.Warning
 import com.example.interview_ai.ui.components.SurfaceCard
 import com.example.interview_ai.ui.navigation.Routes
 import com.example.interview_ai.viewmodel.DashboardViewModel
-
+import com.example.interview_ai.ui.components.BottomNavBar
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun DashboardScreen(
@@ -102,64 +102,68 @@ fun DashboardScreen(
     ) { uri: Uri? ->
         uri?.let {
             val fileName = getFileNameFromUri(context, it) ?: "resume.pdf"
-            viewModel.uploadResume(fileName)
+            viewModel.uploadResume(context, it, fileName)
         }
     }
 
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                containerColor = SurfaceDark,
-                tonalElevation = 8.dp,
-                modifier = Modifier.border(1.dp, BorderSubtle, RoundedCornerShape(topStart = AppRadius.lg, topEnd = AppRadius.lg))
-            ) {
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                    label = { Text("Home") },
-                    selected = selectedItem == 0,
-                    onClick = { selectedItem = 0 },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = TextPrimary,
-                        unselectedIconColor = TextMuted,
-                        selectedTextColor = TextPrimary,
-                        unselectedTextColor = TextMuted,
-                        indicatorColor = Primary
-                    )
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Refresh, contentDescription = "History") },
-                    label = { Text("History") },
-                    selected = selectedItem == 1,
-                    onClick = {
-                        selectedItem = 1
-                        navController.navigate(Routes.History.route)
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = TextPrimary,
-                        unselectedIconColor = TextMuted,
-                        selectedTextColor = TextPrimary,
-                        unselectedTextColor = TextMuted,
-                        indicatorColor = Primary
-                    )
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-                    label = { Text("Profile") },
-                    selected = selectedItem == 2,
-                    onClick = {
-                        selectedItem = 2
-                        navController.navigate(Routes.Profile.route)
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = TextPrimary,
-                        unselectedIconColor = TextMuted,
-                        selectedTextColor = TextPrimary,
-                        unselectedTextColor = TextMuted,
-                        indicatorColor = Primary
-                    )
-                )
-            }
-        },
+    NavigationBar(
+        containerColor = SurfaceDark,
+        tonalElevation = 8.dp,
+        modifier = Modifier.border(1.dp, BorderSubtle, RoundedCornerShape(topStart = AppRadius.lg, topEnd = AppRadius.lg))
+    ) {
+        NavigationBarItem(
+            icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+            label = { Text("Home") },
+            selected = true,
+            onClick = { /* Already on Dashboard */ },
+            colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = TextPrimary,
+                unselectedIconColor = TextMuted,
+                selectedTextColor = TextPrimary,
+                unselectedTextColor = TextMuted,
+                indicatorColor = Primary
+            )
+        )
+        NavigationBarItem(
+            icon = { Icon(Icons.Default.Refresh, contentDescription = "History") },
+            label = { Text("History") },
+            selected = false,
+            onClick = {
+                navController.navigate(Routes.History.route) {
+                    popUpTo(Routes.Dashboard.route) { inclusive = false }
+                    launchSingleTop = true
+                }
+            },
+            colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = TextPrimary,
+                unselectedIconColor = TextMuted,
+                selectedTextColor = TextPrimary,
+                unselectedTextColor = TextMuted,
+                indicatorColor = Primary
+            )
+        )
+        NavigationBarItem(
+            icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
+            label = { Text("Profile") },
+            selected = false,
+            onClick = {
+                navController.navigate(Routes.Profile.route) {
+                    popUpTo(Routes.Dashboard.route) { inclusive = false }
+                    launchSingleTop = true
+                }
+            },
+            colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = TextPrimary,
+                unselectedIconColor = TextMuted,
+                selectedTextColor = TextPrimary,
+                unselectedTextColor = TextMuted,
+                indicatorColor = Primary
+            )
+        )
+    }
+},
         containerColor = BackgroundDark
     ) { innerPadding ->
         Column(
@@ -442,6 +446,47 @@ fun DashboardScreen(
                             text = "AI parser extracting skills & role from resume...",
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextPrimary
+                        )
+                    }
+                }
+            }
+
+            if (uiState.parseError) {
+                Spacer(modifier = Modifier.height(AppSpacing.md))
+                SurfaceCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    borderColor = Error,
+                    padding = AppSpacing.lg
+                ) {
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Parse Error",
+                                tint = Error,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(AppSpacing.sm))
+                            Text(
+                                text = "Resume Parsing Failed",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                color = Error
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(AppSpacing.sm))
+                        Text(
+                            text = uiState.parseErrorMessage,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(AppSpacing.md))
+                        Text(
+                            text = "Remove & Try Again",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = Error,
+                            modifier = Modifier
+                                .clickable { viewModel.removeResume() }
+                                .padding(vertical = AppSpacing.xs)
                         )
                     }
                 }

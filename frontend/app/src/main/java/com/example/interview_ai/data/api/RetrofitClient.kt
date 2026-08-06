@@ -7,7 +7,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
     // 10.0.2.2 points to host localhost port from Android Emulator
-    private const val BASE_URL = "http://10.0.2.2:5000/"
+    private const val BASE_URL = "http://172.60.4.54:5000/"
 
     private var token: String? = null
 

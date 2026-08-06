@@ -19,5 +19,7 @@ data class DashboardUiState(
     val uploadProgress: Float = 0f,
     val isUploading: Boolean = false,
     val isParsing: Boolean = false,
-    val parsedResume: ParsedResume? = null
+    val parsedResume: ParsedResume? = null,
+    val parseError: Boolean = false,
+    val parseErrorMessage: String = ""
 )

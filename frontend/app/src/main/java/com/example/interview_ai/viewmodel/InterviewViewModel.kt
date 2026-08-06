@@ -5,11 +5,13 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.interview_ai.data.api.AnswerItem
 import com.example.interview_ai.data.api.EvaluateRequest
-import com.example.interview_ai.data.api.GenerateQuestionsRequest
+import com.example.interview_ai.data.api.StartInterviewRequest
+import com.example.interview_ai.data.api.NextQuestionRequest
+import com.example.interview_ai.data.api.ConversationItem
 import com.example.interview_ai.data.api.RetrofitClient
 import com.example.interview_ai.data.model.InterviewStatus
+import com.example.interview_ai.data.model.InterviewState
 import com.example.interview_ai.data.model.InterviewUiState
-import com.example.interview_ai.data.model.Question
 import com.example.interview_ai.utils.SpeechToTextEngine
 import com.example.interview_ai.utils.TextToSpeechEngine
 import kotlinx.coroutines.Job
@@ -29,7 +31,10 @@ class InterviewViewModel(application: Application) : AndroidViewModel(applicatio
     private val sttEngine = SpeechToTextEngine(application)
 
     private val answersTranscript = mutableListOf<AnswerItem>()
+    private val conversationHistory = mutableListOf<ConversationItem>()
     private var timerJob: Job? = null
+    private var silenceDetectionJob: Job? = null
+    private var onSessionCompleted: (() -> Unit)? = null
 
     fun setDifficulty(difficulty: String) {
         _uiState.update { it.copy(selectedDifficulty = difficulty) }
@@ -47,26 +52,29 @@ class InterviewViewModel(application: Application) : AndroidViewModel(applicatio
         ttsEngine.stop()
         sttEngine.stopListening()
         timerJob?.cancel()
+        silenceDetectionJob?.cancel()
         answersTranscript.clear()
+        conversationHistory.clear()
         _uiState.update { InterviewUiState() }
     }
 
-    fun startInterviewSession() {
-        val questions = _uiState.value.generatedQuestions
-        if (questions.isEmpty()) return
-
+    fun startInterviewSession(targetRole: String, skills: List<String>, onCompleted: () -> Unit) {
+        this.onSessionCompleted = onCompleted
         answersTranscript.clear()
+        conversationHistory.clear()
+
         _uiState.update {
             it.copy(
                 status = InterviewStatus.ACTIVE,
-                currentQuestionIndex = 0,
-                activeQuestionText = questions[0].text,
+                interviewState = InterviewState.GREETING,
                 sessionDurationSeconds = 0,
+                activeQuestionText = "",
+                userTranscript = "",
                 isPaused = false
             )
         }
 
-        // Start timer
+        // Start duration timer
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
             while (_uiState.value.status == InterviewStatus.ACTIVE) {
@@ -79,30 +87,73 @@ class InterviewViewModel(application: Application) : AndroidViewModel(applicatio
             }
         }
 
-        speakActiveQuestion()
+        // Speak the initial greeting
+        val greetingText = "Hello. Welcome to today's interview. Let's begin."
+        _uiState.update {
+            it.copy(
+                interviewState = InterviewState.AI_SPEAKING,
+                activeQuestionText = greetingText
+            )
+        }
+
+        ttsEngine.speak(greetingText) {
+            viewModelScope.launch {
+                if (!_uiState.value.isPaused && _uiState.value.status == InterviewStatus.ACTIVE) {
+                    fetchFirstQuestion(targetRole)
+                }
+            }
+        }
+    }
+
+    private suspend fun fetchFirstQuestion(targetRole: String) {
+        _uiState.update { it.copy(interviewState = InterviewState.AI_THINKING) }
+        try {
+            val response = RetrofitClient.apiService.startInterview(
+                StartInterviewRequest(
+                    targetRole = targetRole.ifEmpty { "Android Developer" },
+                    difficulty = _uiState.value.selectedDifficulty,
+                    category = _uiState.value.selectedCategory
+                )
+            )
+            val firstQuestion = response.question
+            conversationHistory.add(ConversationItem(role = "interviewer", text = firstQuestion))
+            
+            _uiState.update {
+                it.copy(
+                    activeQuestionText = firstQuestion,
+                    interviewState = InterviewState.AI_SPEAKING
+                )
+            }
+            speakActiveQuestion()
+        } catch (e: Exception) {
+            // Offline fallback first question
+            val fallbackQ = "Could you tell me about your background in mobile engineering and your preferred architecture patterns?"
+            conversationHistory.add(ConversationItem(role = "interviewer", text = fallbackQ))
+            _uiState.update {
+                it.copy(
+                    activeQuestionText = fallbackQ,
+                    interviewState = InterviewState.AI_SPEAKING
+                )
+            }
+            speakActiveQuestion()
+        }
     }
 
     private fun speakActiveQuestion() {
         val currentQuestionText = _uiState.value.activeQuestionText
-        
         _uiState.update {
             it.copy(
-                isAiSpeaking = true,
-                isListening = false,
-                userTranscript = "",
-                isThinking = false
+                interviewState = InterviewState.AI_SPEAKING,
+                userTranscript = ""
             )
         }
 
-        // Speak the question using native TTS engine
         ttsEngine.speak(currentQuestionText) {
-            // Callback: when TTS finished speaking, activate microphone STT listener
             viewModelScope.launch {
                 if (!_uiState.value.isPaused && _uiState.value.status == InterviewStatus.ACTIVE) {
                     _uiState.update {
                         it.copy(
-                            isAiSpeaking = false,
-                            isListening = true
+                            interviewState = InterviewState.LISTENING
                         )
                     }
                     startSpeechToTextListener()
@@ -115,89 +166,175 @@ class InterviewViewModel(application: Application) : AndroidViewModel(applicatio
         sttEngine.startListening(
             onResults = { result ->
                 _uiState.update { it.copy(userTranscript = result) }
+                resetSilenceDetectionTimer()
             },
             onPartialResults = { partial ->
                 _uiState.update { it.copy(userTranscript = partial) }
+                resetSilenceDetectionTimer()
             },
             onError = { error ->
-                // STT failed or timed out. Gracefully keep listening or let user type.
+                val currentState = _uiState.value.interviewState
+                if (currentState == InterviewState.LISTENING || currentState == InterviewState.SILENCE_DETECTION) {
+                    if (error == 7 || error == 6) { // Timeout or No Match
+                        if (_uiState.value.userTranscript.trim().isNotEmpty()) {
+                            submitUserAnswer()
+                        } else if (!_uiState.value.isPaused && _uiState.value.status == InterviewStatus.ACTIVE) {
+                            startSpeechToTextListener()
+                        }
+                    } else if (error == 8) { // Busy
+                        viewModelScope.launch {
+                            sttEngine.stopListening()
+                            delay(300)
+                            if (!_uiState.value.isPaused && _uiState.value.status == InterviewStatus.ACTIVE) {
+                                startSpeechToTextListener()
+                            }
+                        }
+                    } else {
+                        if (!_uiState.value.isPaused && _uiState.value.status == InterviewStatus.ACTIVE) {
+                            startSpeechToTextListener()
+                        }
+                    }
+                }
             }
         )
     }
 
-    fun submitUserAnswer(onCompleted: () -> Unit) {
-        sttEngine.stopListening()
-        val currentQuestion = _uiState.value.generatedQuestions[_uiState.value.currentQuestionIndex]
-        val answerText = _uiState.value.userTranscript
+    private fun resetSilenceDetectionTimer() {
+        silenceDetectionJob?.cancel()
+        if (_uiState.value.userTranscript.trim().isEmpty()) return
 
-        // Add current Q&A to the transcript list
+        silenceDetectionJob = viewModelScope.launch {
+            _uiState.update { it.copy(interviewState = InterviewState.SILENCE_DETECTION) }
+            delay(5000) // 5 seconds silence threshold
+            if (_uiState.value.interviewState == InterviewState.SILENCE_DETECTION) {
+                submitUserAnswer()
+            }
+        }
+    }
+
+    fun submitUserAnswer() {
+        silenceDetectionJob?.cancel()
+        sttEngine.stopListening()
+
+        val answerText = _uiState.value.userTranscript
+        val questionText = _uiState.value.activeQuestionText
+
+        conversationHistory.add(ConversationItem(role = "candidate", text = answerText))
         answersTranscript.add(
             AnswerItem(
-                questionId = currentQuestion.id,
-                questionText = currentQuestion.text,
+                questionId = "q_${answersTranscript.size + 1}",
+                questionText = questionText,
                 userAnswer = answerText
             )
         )
 
+        _uiState.update {
+            it.copy(
+                interviewState = InterviewState.PROCESSING
+            )
+        }
+
         viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    isListening = false,
-                    isThinking = true
-                )
+            val limit = _uiState.value.selectedQuestionCount
+            if (answersTranscript.size >= limit) {
+                concludeInterview()
+            } else {
+                fetchNextQuestion(answerText)
             }
+        }
+    }
 
-            val currentIndex = _uiState.value.currentQuestionIndex
-            val questions = _uiState.value.generatedQuestions
+    private suspend fun fetchNextQuestion(currentAnswer: String) {
+        _uiState.update { it.copy(interviewState = InterviewState.AI_THINKING) }
+        delay(1500) // 1.5s thinking delay for realism
 
-            if (currentIndex + 1 < questions.size) {
+        try {
+            val response = RetrofitClient.apiService.getNextQuestion(
+                NextQuestionRequest(
+                    targetRole = "Android Developer",
+                    difficulty = _uiState.value.selectedDifficulty,
+                    category = _uiState.value.selectedCategory,
+                    conversationHistory = conversationHistory,
+                    currentAnswer = currentAnswer
+                )
+            )
+
+            if (response.isLastQuestion || response.nextQuestion.isBlank()) {
+                concludeInterview()
+            } else {
+                conversationHistory.add(ConversationItem(role = "interviewer", text = response.nextQuestion))
                 _uiState.update {
                     it.copy(
-                        currentQuestionIndex = currentIndex + 1,
-                        activeQuestionText = questions[currentIndex + 1].text,
-                        isThinking = false
+                        activeQuestionText = response.nextQuestion,
+                        interviewState = InterviewState.AI_SPEAKING
                     )
                 }
                 speakActiveQuestion()
-            } else {
-                // Last question answered, evaluate transcript
-                evaluateSession(onCompleted)
+            }
+        } catch (e: Exception) {
+            // Offline fallback follow-up
+            val offlineQ = "Can you share your experience implementing dependency injection, specifically describing custom scopes and components?"
+            conversationHistory.add(ConversationItem(role = "interviewer", text = offlineQ))
+            _uiState.update {
+                it.copy(
+                    activeQuestionText = offlineQ,
+                    interviewState = InterviewState.AI_SPEAKING
+                )
+            }
+            speakActiveQuestion()
+        }
+    }
+
+    private fun concludeInterview() {
+        val concludeText = "Thank you. That concludes today's interview."
+        _uiState.update {
+            it.copy(
+                interviewState = InterviewState.AI_SPEAKING,
+                activeQuestionText = concludeText
+            )
+        }
+
+        ttsEngine.speak(concludeText) {
+            viewModelScope.launch {
+                evaluateSession {
+                    onSessionCompleted?.invoke()
+                }
             }
         }
     }
 
     private fun evaluateSession(onCompleted: () -> Unit) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isThinking = true) }
-            
-            // Format time elapsed
+            _uiState.update { it.copy(interviewState = InterviewState.PROCESSING) }
+
             val minutes = _uiState.value.sessionDurationSeconds / 60
             val seconds = _uiState.value.sessionDurationSeconds % 60
             val formattedTime = String.format("%02d:%02d", minutes, seconds)
 
             try {
-                // Post answers transcript directly to Gemini evaluation backend API
                 RetrofitClient.apiService.evaluateInterview(
                     EvaluateRequest(
                         duration = formattedTime,
                         transcript = answersTranscript,
-                        role = "Senior Android Developer"
+                        role = "Android Developer",
+                        difficulty = _uiState.value.selectedDifficulty,
+                        category = _uiState.value.selectedCategory
                     )
                 )
 
                 _uiState.update {
                     it.copy(
                         status = InterviewStatus.COMPLETED,
-                        isThinking = false
+                        interviewState = InterviewState.COMPLETED
                     )
                 }
             } catch (e: Exception) {
-                // Connection/Server failure. Evaluate simulated local fallback.
+                // Connection/Server failure fallback
                 delay(1200)
                 _uiState.update {
                     it.copy(
                         status = InterviewStatus.COMPLETED,
-                        isThinking = false
+                        interviewState = InterviewState.COMPLETED
                     )
                 }
             }
@@ -210,134 +347,41 @@ class InterviewViewModel(application: Application) : AndroidViewModel(applicatio
             val nextPaused = !state.isPaused
             state.copy(
                 isPaused = nextPaused,
-                isListening = if (!nextPaused && !state.isAiSpeaking && !state.isThinking) true else state.isListening
+                interviewState = if (nextPaused) state.interviewState else state.interviewState
             )
         }
-        
+
         if (_uiState.value.isPaused) {
             ttsEngine.stop()
             sttEngine.stopListening()
+            silenceDetectionJob?.cancel()
         } else {
-            if (_uiState.value.isListening) {
+            val state = _uiState.value.interviewState
+            if (state == InterviewState.LISTENING) {
                 startSpeechToTextListener()
-            } else if (_uiState.value.isAiSpeaking) {
+            } else if (state == InterviewState.AI_SPEAKING) {
                 speakActiveQuestion()
             }
         }
     }
 
     fun finishInterview(onCompleted: () -> Unit) {
+        this.onSessionCompleted = onCompleted
         ttsEngine.stop()
         sttEngine.stopListening()
         timerJob?.cancel()
-        
-        // Evaluate immediately what user has answered so far
+        silenceDetectionJob?.cancel()
         evaluateSession(onCompleted)
     }
 
-    fun generateQuestions(targetRole: String, skills: List<String>) {
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    status = InterviewStatus.GENERATING,
-                    isGenerating = true,
-                    generationProgress = 0.0f
-                )
-            }
-
-            for (step in 1..5) {
-                delay(200)
-                _uiState.update {
-                    it.copy(generationProgress = step * 0.2f)
-                }
-            }
-
-            try {
-                // Request Gemini generated questions from server API
-                val questions = RetrofitClient.apiService.generateQuestions(
-                    GenerateQuestionsRequest(
-                        targetRole = targetRole.ifEmpty { "Android Developer" },
-                        skills = skills.ifEmpty { listOf("Kotlin", "Compose") },
-                        count = _uiState.value.selectedQuestionCount,
-                        category = _uiState.value.selectedCategory,
-                        difficulty = _uiState.value.selectedDifficulty
-                    )
-                )
-
-                _uiState.update {
-                    it.copy(
-                        status = InterviewStatus.READY,
-                        isGenerating = false,
-                        generatedQuestions = questions
-                    )
-                }
-            } catch (e: Exception) {
-                // Fallback to local mock generator if server is down or error
-                val offlineQuestions = createMockQuestions(
-                    role = targetRole.ifEmpty { "Android Developer" },
-                    skills = skills.ifEmpty { listOf("Kotlin", "Compose") },
-                    count = _uiState.value.selectedQuestionCount,
-                    category = _uiState.value.selectedCategory,
-                    difficulty = _uiState.value.selectedDifficulty
-                )
-
-                _uiState.update {
-                    it.copy(
-                        status = InterviewStatus.READY,
-                        isGenerating = false,
-                        generatedQuestions = offlineQuestions
-                    )
-                }
-            }
-        }
-    }
-
-    private fun createMockQuestions(
-        role: String,
-        skills: List<String>,
-        count: Int,
-        category: String,
-        difficulty: String
-    ): List<Question> {
-        val technicalQuestions = listOf(
-            "Explain the difference between launch and async in Kotlin Coroutines. When would you use each?",
-            "What is Jetpack Compose Recomposition? How can you optimize a Composable to prevent unnecessary recompositions?",
-            "How does ViewModel survive configuration changes under the hood? Explain the role of ViewModelStore.",
-            "Explain clean architecture layers in Android. Why should the domain layer be decoupled from framework details?",
-            "What are Kotlin StateFlow and SharedFlow? Describe a scenario where SharedFlow is preferred over StateFlow.",
-            "How do you implement dependency injection in Android using Dagger Hilt? What are Scopes and Components?"
-        )
-
-        val behavioralQuestions = listOf(
-            "Tell me about a challenging Android bug you faced in a project. How did you diagnose and resolve it?",
-            "Describe a situation where you had to work with a teammate who had a conflicting technical perspective. How did you handle it?",
-            "How do you manage deadlines when multiple high-priority tasks are assigned to you simultaneously?"
-        )
-
-        val mixedList = mutableListOf<Question>()
-        val primaryCategory = if (category == "Technical") technicalQuestions else if (category == "Behavioral") behavioralQuestions else technicalQuestions + behavioralQuestions
-
-        for (i in 0 until count) {
-            val baseQuestion = primaryCategory[i % primaryCategory.size]
-            val skill = if (skills.isNotEmpty()) skills[i % skills.size] else "Android SDK"
-            val text = if (baseQuestion.contains("Kotlin") || baseQuestion.contains("Compose")) baseQuestion else "Regarding your expertise in $skill, how do you handle concurrency or optimization for $role apps?"
-            
-            mixedList.add(
-                Question(
-                    id = (i + 1).toString(),
-                    text = text,
-                    category = if (i % 2 == 0 && category == "Mixed") "Technical" else if (category == "Mixed") "Behavioral" else category,
-                    estimatedTimeMinutes = 2
-                )
-            )
-        }
-        return mixedList
-    }
+    // Legacy method triggers to prevent build errors
+    fun generateQuestions(targetRole: String, skills: List<String>) {}
 
     override fun onCleared() {
         super.onCleared()
         ttsEngine.shutdown()
         sttEngine.destroy()
         timerJob?.cancel()
+        silenceDetectionJob?.cancel()
     }
 }

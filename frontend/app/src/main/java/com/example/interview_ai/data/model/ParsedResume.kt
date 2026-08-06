@@ -6,5 +6,6 @@ data class ParsedResume(
     val skills: List<String> = emptyList(),
     val education: String = "",
     val projectsCount: Int = 0,
-    val isConfirmed: Boolean = false
+    val isConfirmed: Boolean = false,
+    val uploadedResumeName: String = ""
 )

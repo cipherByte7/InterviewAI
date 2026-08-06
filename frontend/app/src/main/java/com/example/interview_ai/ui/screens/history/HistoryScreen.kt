@@ -18,11 +18,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,11 +37,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+
+import com.example.interview_ai.ui.components.BottomNavBar
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.interview_ai.theme.AppRadius
@@ -72,6 +83,63 @@ fun HistoryScreen(
                 onBackClick = { navController.popBackStack() }
             )
         },
+        bottomBar = {
+    NavigationBar(
+    containerColor = SurfaceDark,
+    tonalElevation = 8.dp,
+    modifier = Modifier.border(1.dp, BorderSubtle, RoundedCornerShape(topStart = AppRadius.lg, topEnd = AppRadius.lg))
+) {
+    NavigationBarItem(
+        icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+        label = { Text("Home") },
+        selected = false,
+        onClick = {
+            navController.navigate(Routes.Dashboard.route) {
+                popUpTo(Routes.Dashboard.route) { inclusive = false }
+                launchSingleTop = true
+            }
+        },
+        colors = NavigationBarItemDefaults.colors(
+            selectedIconColor = TextPrimary,
+            unselectedIconColor = TextMuted,
+            selectedTextColor = TextPrimary,
+            unselectedTextColor = TextMuted,
+            indicatorColor = Primary
+        )
+    )
+    NavigationBarItem(
+        icon = { Icon(Icons.Default.Refresh, contentDescription = "History") },
+        label = { Text("History") },
+        selected = true,
+        onClick = { /* Already on History */ },
+        colors = NavigationBarItemDefaults.colors(
+            selectedIconColor = TextPrimary,
+            unselectedIconColor = TextMuted,
+            selectedTextColor = TextPrimary,
+            unselectedTextColor = TextMuted,
+            indicatorColor = Primary
+        )
+    )
+    NavigationBarItem(
+        icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
+        label = { Text("Profile") },
+        selected = false,
+        onClick = {
+            navController.navigate(Routes.Profile.route) {
+                popUpTo(Routes.Dashboard.route) { inclusive = false }
+                launchSingleTop = true
+            }
+        },
+        colors = NavigationBarItemDefaults.colors(
+            selectedIconColor = TextPrimary,
+            unselectedIconColor = TextMuted,
+            selectedTextColor = TextPrimary,
+            unselectedTextColor = TextMuted,
+            indicatorColor = Primary
+        )
+    )
+}
+},
         containerColor = BackgroundDark
     ) { innerPadding ->
         Column(
@@ -146,33 +214,40 @@ fun HistoryScreen(
                 cornerRadius = AppRadius.lg,
                 padding = AppSpacing.sm
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    if (uiState.filteredSessions.isEmpty()) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(AppSpacing.xl),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = "Empty History",
-                                tint = TextMuted,
-                                modifier = Modifier.size(36.dp)
-                            )
-                            Spacer(modifier = Modifier.height(AppSpacing.md))
-                            Text(
-                                text = "No matching interview records found.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextMuted
-                            )
-                        }
-                    } else {
+                when {
+                    uiState.isLoading -> HistoryLoadingSkeleton()
+                    uiState.isError -> HistoryErrorContent(
+                        message = uiState.errorMessage,
+                        onRetry = { viewModel.refresh() }
+                    )
+                    uiState.sessions.isEmpty() -> HistoryEmptyContent(
+                        onStart = { navController.navigate(Routes.Interview.route) }
+                    )
+                    uiState.filteredSessions.isEmpty() -> Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(AppSpacing.xl),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "No results",
+                            tint = TextMuted,
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Spacer(modifier = Modifier.height(AppSpacing.md))
+                        Text(
+                            text = "No sessions match your search.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextMuted
+                        )
+                    }
+                    else -> Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                    ) {
                         uiState.filteredSessions.forEachIndexed { index, session ->
                             Row(
                                 modifier = Modifier
@@ -240,6 +315,190 @@ fun HistoryScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun HistoryLoadingSkeleton() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(AppSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)
+    ) {
+        repeat(5) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(AppSpacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(RoundedCornerShape(AppRadius.sm))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(SurfaceVariantDark, BorderSubtle, SurfaceVariantDark)
+                                )
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(AppSpacing.md))
+                    Column {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.55f)
+                                .height(12.dp)
+                                .clip(RoundedCornerShape(AppRadius.full))
+                                .background(SurfaceVariantDark)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.3f)
+                                .height(9.dp)
+                                .clip(RoundedCornerShape(AppRadius.full))
+                                .background(BorderSubtle)
+                        )
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .size(width = 52.dp, height = 20.dp)
+                        .clip(RoundedCornerShape(AppRadius.full))
+                        .background(SurfaceVariantDark)
+                )
+            }
+            if (it < 4) HorizontalDivider(color = BorderSubtle, thickness = 1.dp)
+        }
+    }
+}
+
+@Composable
+fun HistoryEmptyContent(onStart: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(AppSpacing.xl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Primary.copy(alpha = 0.15f),
+                            Color.Transparent
+                        )
+                    ),
+                    shape = RoundedCornerShape(AppRadius.full)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = "No History",
+                tint = Primary,
+                modifier = Modifier.size(36.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(AppSpacing.lg))
+        Text(
+            text = "No sessions yet",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            color = TextPrimary
+        )
+        Spacer(modifier = Modifier.height(AppSpacing.sm))
+        Text(
+            text = "Complete your first mock interview to start\nbuilding your practice portfolio.",
+            style = MaterialTheme.typography.bodySmall,
+            color = TextMuted,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(AppSpacing.xl))
+        Box(
+            modifier = Modifier
+                .background(
+                    color = Primary.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(AppRadius.md)
+                )
+                .border(1.dp, Primary.copy(alpha = 0.4f), RoundedCornerShape(AppRadius.md))
+                .clickable { onStart() }
+                .padding(horizontal = AppSpacing.xl, vertical = AppSpacing.md)
+        ) {
+            Text(
+                text = "Start My First Interview",
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                color = Primary
+            )
+        }
+    }
+}
+
+@Composable
+fun HistoryErrorContent(message: String, onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(AppSpacing.xl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Error.copy(alpha = 0.15f),
+                            Color.Transparent
+                        )
+                    ),
+                    shape = RoundedCornerShape(AppRadius.full)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = "Error",
+                tint = Error,
+                modifier = Modifier.size(36.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(AppSpacing.lg))
+        Text(
+            text = "Couldn't load history",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            color = TextPrimary
+        )
+        Spacer(modifier = Modifier.height(AppSpacing.sm))
+        Text(
+            text = "Check your connection and try again.",
+            style = MaterialTheme.typography.bodySmall,
+            color = TextMuted,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(AppSpacing.xl))
+        Box(
+            modifier = Modifier
+                .background(
+                    color = Error.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(AppRadius.md)
+                )
+                .border(1.dp, Error.copy(alpha = 0.4f), RoundedCornerShape(AppRadius.md))
+                .clickable { onRetry() }
+                .padding(horizontal = AppSpacing.xl, vertical = AppSpacing.md)
+        ) {
+            Text(
+                text = "Retry",
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                color = Error
+            )
         }
     }
 }

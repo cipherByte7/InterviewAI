@@ -1,5 +1,10 @@
 const jwt = require('jsonwebtoken');
 
+// Shared blacklist — populated by /api/auth/logout
+// Imported lazily so server.js initialises it first
+let _getBlacklist = null;
+const setBlacklistProvider = (fn) => { _getBlacklist = fn; };
+
 module.exports = function (req, res, next) {
   // Get token from header
   const authHeader = req.header('Authorization');
@@ -15,6 +20,11 @@ module.exports = function (req, res, next) {
 
   const token = parts[1];
 
+  // Check if token has been invalidated via logout
+  if (_getBlacklist && _getBlacklist().has(token)) {
+    return res.status(401).json({ msg: 'Token has been invalidated. Please log in again.' });
+  }
+
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_interview_key_123');
     req.userId = decoded.userId;
@@ -23,3 +33,5 @@ module.exports = function (req, res, next) {
     res.status(401).json({ msg: 'Token is not valid' });
   }
 };
+
+module.exports.setBlacklistProvider = setBlacklistProvider;

@@ -63,7 +63,7 @@ fun AppNavGraph(
         }
 
         composable(Routes.Profile.route) {
-            ProfileScreen(navController)
+            ProfileScreen(navController, authViewModel, dashboardViewModel)
         }
     }
 }
