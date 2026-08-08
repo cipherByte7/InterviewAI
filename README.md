@@ -32,23 +32,23 @@
 
 # 📱 Screenshots
 
-> All screenshots are captured in the application's Dark Theme.
+> All screenshots are captured using the application's Dark Theme.
 
 | Splash | Login | Register |
-|---------|--------|----------|
-| ![](screenshots/splash.png) | ![](screenshots/login.png) | ![](screenshots/register.png) |
+|--------|--------|--------|
+| <img src="screenshots/splash.jpg" width="230"/> | <img src="screenshots/login.jpg" width="230"/> | <img src="screenshots/register.jpg" width="230"/> |
 
 | Dashboard | Resume Upload | Interview Configuration |
-|------------|---------------|-------------------------|
-| ![](screenshots/dashboard.png) | ![](screenshots/upload_resume.png) | ![](screenshots/configure_interview.png) |
+|--------|--------|--------|
+| <img src="screenshots/dashboard.jpg" width="230"/> | <img src="screenshots/resume_upload.jpg" width="230"/> | <img src="screenshots/configure_interview.jpg" width="230"/> |
 
 | Live Interview | AI Evaluation | History |
-|----------------|---------------|---------|
-| ![](screenshots/interview.png) | ![](screenshots/report.png) | ![](screenshots/history.png) |
+|--------|--------|--------|
+| <img src="screenshots/interview.jpg" width="230"/> | <img src="screenshots/report.jpg" width="230"/> | <img src="screenshots/history.jpg" width="230"/> |
 
 | Profile |
-|----------|
-| ![](screenshots/profile.png) |
+|--------|
+| <img src="screenshots/profile.jpg" width="230"/> |
 
 ---
 
