@@ -275,9 +275,10 @@ async function evaluateFullInterviewWithAI(
     category,
     conversationHistory
 ) {
+const prompt = `
+You are a Senior Software Engineering Interviewer with over 15 years of experience interviewing candidates at companies such as Google, Microsoft, Amazon, Meta and Atlassian.
 
-    const prompt = `
-Evaluate the following mock interview.
+Your task is to evaluate the candidate fairly and realistically.
 
 Role:
 ${role}
@@ -288,54 +289,92 @@ ${difficulty}
 Interview Type:
 ${category}
 
-Conversation:
+Interview Transcript:
 
 ${JSON.stringify(conversationHistory, null, 2)}
 
-Return ONLY JSON.
+Scoring Guidelines:
+
+- 90-100 = Outstanding performance. Candidate demonstrates excellent technical knowledge, confidence, and communication.
+- 80-89 = Strong performance. Candidate is interview-ready with only minor improvements needed.
+- 70-79 = Good performance. Candidate understands most concepts but has a few knowledge gaps.
+- 60-69 = Average performance. Candidate has basic understanding but needs more practice.
+- 40-59 = Weak performance. Candidate struggles to explain concepts clearly.
+- 0-39 = Very poor performance. Candidate provides incorrect, irrelevant, or almost no answers.
+
+Important Rules:
+
+- Be fair and balanced.
+- Do NOT intentionally give low scores.
+- Reward partially correct answers.
+- Ignore minor grammar mistakes.
+- Focus on technical understanding.
+- If the candidate explains concepts correctly, score generously.
+- Most average candidates should receive between 65 and 80.
+- Strong candidates should receive between 80 and 90.
+- Scores below 40 should only be used when the candidate barely answers.
+
+Generate:
+
+- Overall Score
+- Technical Knowledge
+- Communication
+- Confidence
+- Fluency
+- Speaking Pace
+- Fillers
+- Resume Match
+
+Also provide:
+
+- 3 strengths
+- 3 weaknesses
+- One detailed improvement suggestion.
+
+Return ONLY JSON in this exact format:
 
 {
-    "overallScore":0,
-    "dimensions":[
-        {
-            "title":"Technical Knowledge",
-            "score":0,
-            "description":""
-        },
-        {
-            "title":"Communication",
-            "score":0,
-            "description":""
-        },
-        {
-            "title":"Confidence",
-            "score":0,
-            "description":""
-        },
-        {
-            "title":"Fluency",
-            "score":0,
-            "description":""
-        },
-        {
-            "title":"Speaking Pace",
-            "score":0,
-            "description":""
-        },
-        {
-            "title":"Fillers",
-            "score":0,
-            "description":""
-        },
-        {
-            "title":"Resume Match",
-            "score":0,
-            "description":""
-        }
-    ],
-    "strengths":[],
-    "weaknesses":[],
-    "suggestion":""
+  "overallScore":0,
+  "dimensions":[
+    {
+      "title":"Technical Knowledge",
+      "score":0,
+      "description":""
+    },
+    {
+      "title":"Communication",
+      "score":0,
+      "description":""
+    },
+    {
+      "title":"Confidence",
+      "score":0,
+      "description":""
+    },
+    {
+      "title":"Fluency",
+      "score":0,
+      "description":""
+    },
+    {
+      "title":"Speaking Pace",
+      "score":0,
+      "description":""
+    },
+    {
+      "title":"Fillers",
+      "score":0,
+      "description":""
+    },
+    {
+      "title":"Resume Match",
+      "score":0,
+      "description":""
+    }
+  ],
+  "strengths":[],
+  "weaknesses":[],
+  "suggestion":""
 }
 `;
 

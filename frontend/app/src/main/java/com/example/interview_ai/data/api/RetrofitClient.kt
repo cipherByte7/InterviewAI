@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit
 object RetrofitClient {
     // 10.0.2.2 → host machine localhost from Android Emulator
     // Change to your machine's LAN IP when running on a real device
-    private const val BASE_URL = "http://172.60.4.54:5000/"
+    private const val BASE_URL = "https://interviewai-nxn4.onrender.com"
 
     private var token: String? = null
 

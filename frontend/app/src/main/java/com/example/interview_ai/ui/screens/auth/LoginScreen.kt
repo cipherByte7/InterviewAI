@@ -201,7 +201,7 @@ fun LoginScreen(
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(AppSpacing.sm))
+                    Spacer(modifier = Modifier.height(AppSpacing.md))
 
                     Box(
                         modifier = Modifier.fillMaxWidth(),
@@ -215,7 +215,7 @@ fun LoginScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(AppSpacing.lg))
+                    Spacer(modifier = Modifier.height(AppSpacing.xl))
 
                     if (uiState.generalError != null) {
                         Text(

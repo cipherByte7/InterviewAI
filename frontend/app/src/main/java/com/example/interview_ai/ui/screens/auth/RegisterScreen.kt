@@ -229,7 +229,7 @@ fun RegisterScreen(
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(AppSpacing.lg))
+                    Spacer(modifier = Modifier.height(AppSpacing.xl))
 
                     if (uiState.generalError != null) {
                         Text(
