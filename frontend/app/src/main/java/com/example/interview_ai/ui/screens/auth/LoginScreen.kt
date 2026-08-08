@@ -215,6 +215,8 @@ fun LoginScreen(
                         )
                     }
 
+                    Spacer(modifier = Modifier.height(AppSpacing.lg))
+
                     if (uiState.generalError != null) {
                         Text(
                             text = uiState.generalError ?: "",
