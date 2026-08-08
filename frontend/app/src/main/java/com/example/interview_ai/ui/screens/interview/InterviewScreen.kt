@@ -1,5 +1,6 @@
 package com.example.interview_ai.ui.screens.interview
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -48,6 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -85,6 +87,7 @@ fun InterviewScreen(
     dashboardViewModel: DashboardViewModel
 ) {
 
+
     val uiState by interviewViewModel.uiState.collectAsState()
     val dashState by dashboardViewModel.uiState.collectAsState()
     val targetRole = dashState.parsedResume?.parsedRole ?: dashState.targetRole
@@ -111,6 +114,12 @@ fun InterviewScreen(
                 android.Manifest.permission.RECORD_AUDIO
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
         )
+    }
+
+    LaunchedEffect(Unit) {
+        if (interviewViewModel.uiState.value.status == InterviewStatus.COMPLETED) {
+            interviewViewModel.prepareForNewInterview()
+        }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
