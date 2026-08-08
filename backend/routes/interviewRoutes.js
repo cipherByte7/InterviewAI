@@ -8,5 +8,6 @@ router.post('/next-question', auth, interviewController.nextQuestion);
 router.post('/evaluate', auth, interviewController.evaluateInterview);
 router.get('/history', auth, interviewController.getHistory);
 router.get('/report/:id', auth, interviewController.getReportById);
+router.delete('/report/:id', auth, interviewController.deleteReport);
 
 module.exports = router;

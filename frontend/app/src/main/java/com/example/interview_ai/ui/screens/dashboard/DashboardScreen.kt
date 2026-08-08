@@ -38,6 +38,8 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.alpha
+import androidx.compose.animation.core.*
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -91,6 +93,16 @@ fun DashboardScreen(
     viewModel: DashboardViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val colorScheme = MaterialTheme.colorScheme
+    val BackgroundDark = colorScheme.background
+    val SurfaceDark = colorScheme.surface
+    val SurfaceVariantDark = colorScheme.surfaceVariant
+    val BorderSubtle = colorScheme.outlineVariant
+    val TextPrimary = colorScheme.onBackground
+    val TextSecondary = colorScheme.onSurfaceVariant
+    val TextMuted = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+    val Primary = colorScheme.primary
+    val PrimaryGlow = colorScheme.primary.copy(alpha = 0.15f)
     var selectedItem by remember { mutableIntStateOf(0) }
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -112,64 +124,8 @@ fun DashboardScreen(
     }
 
     Scaffold(
-        bottomBar = {
-    NavigationBar(
-        containerColor = SurfaceDark,
-        tonalElevation = 8.dp,
-        modifier = Modifier.border(1.dp, BorderSubtle, RoundedCornerShape(topStart = AppRadius.lg, topEnd = AppRadius.lg))
-    ) {
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-            label = { Text("Home") },
-            selected = true,
-            onClick = { /* Already on Dashboard */ },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = TextPrimary,
-                unselectedIconColor = TextMuted,
-                selectedTextColor = TextPrimary,
-                unselectedTextColor = TextMuted,
-                indicatorColor = Primary
-            )
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Refresh, contentDescription = "History") },
-            label = { Text("History") },
-            selected = false,
-            onClick = {
-                navController.navigate(Routes.History.route) {
-                    popUpTo(Routes.Dashboard.route) { inclusive = false }
-                    launchSingleTop = true
-                }
-            },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = TextPrimary,
-                unselectedIconColor = TextMuted,
-                selectedTextColor = TextPrimary,
-                unselectedTextColor = TextMuted,
-                indicatorColor = Primary
-            )
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-            label = { Text("Profile") },
-            selected = false,
-            onClick = {
-                navController.navigate(Routes.Profile.route) {
-                    popUpTo(Routes.Dashboard.route) { inclusive = false }
-                    launchSingleTop = true
-                }
-            },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = TextPrimary,
-                unselectedIconColor = TextMuted,
-                selectedTextColor = TextPrimary,
-                unselectedTextColor = TextMuted,
-                indicatorColor = Primary
-            )
-        )
-    }
-},
-        containerColor = BackgroundDark
+        bottomBar = { BottomNavBar(navController) },
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -433,25 +389,55 @@ fun DashboardScreen(
 
             if (uiState.isParsing) {
                 Spacer(modifier = Modifier.height(AppSpacing.md))
+                val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
+                val alphaAnim by infiniteTransition.animateFloat(
+                    initialValue = 0.35f,
+                    targetValue = 0.8f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1000, easing = LinearEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "alpha"
+                )
                 SurfaceCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    borderColor = AccentCyan,
+                    modifier = Modifier.fillMaxWidth().alpha(alphaAnim),
+                    borderColor = colorScheme.primary.copy(alpha = 0.4f),
                     padding = AppSpacing.lg
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        androidx.compose.material3.CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = AccentCyan,
-                            strokeWidth = 2.dp
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = colorScheme.primary,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(AppSpacing.md))
+                            Text(
+                                text = "Extracting details with Gemini AI...",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                color = TextPrimary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(AppSpacing.md))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.55f)
+                                .height(16.dp)
+                                .background(colorScheme.onSurface.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
                         )
-                        Spacer(modifier = Modifier.width(AppSpacing.md))
-                        Text(
-                            text = "AI parser extracting skills & role from resume...",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = TextPrimary
+                        Spacer(modifier = Modifier.height(AppSpacing.sm))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.35f)
+                                .height(12.dp)
+                                .background(colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(4.dp))
                         )
+                        Spacer(modifier = Modifier.height(AppSpacing.md))
+                        Row(horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)) {
+                            Box(modifier = Modifier.size(60.dp, 20.dp).background(colorScheme.onSurface.copy(alpha = 0.06f), RoundedCornerShape(4.dp)))
+                            Box(modifier = Modifier.size(80.dp, 20.dp).background(colorScheme.onSurface.copy(alpha = 0.06f), RoundedCornerShape(4.dp)))
+                            Box(modifier = Modifier.size(50.dp, 20.dp).background(colorScheme.onSurface.copy(alpha = 0.06f), RoundedCornerShape(4.dp)))
+                        }
                     }
                 }
             }
@@ -698,7 +684,7 @@ fun DashboardScreen(
         ModalBottomSheet(
             onDismissRequest = { showUploadSheet = false },
             sheetState = sheetState,
-            containerColor = SurfaceDark,
+            containerColor = MaterialTheme.colorScheme.surface,
             dragHandle = {
                 Box(
                     modifier = Modifier

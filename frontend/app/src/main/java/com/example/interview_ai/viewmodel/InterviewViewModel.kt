@@ -49,14 +49,45 @@ class InterviewViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun resetInterview() {
-        ttsEngine.stop()
-        sttEngine.stopListening()
         timerJob?.cancel()
         silenceDetectionJob?.cancel()
+
+        ttsEngine.stop()
+        sttEngine.stopListening()
+
         answersTranscript.clear()
         conversationHistory.clear()
-        _uiState.update { InterviewUiState() }
+
+        _uiState.value = InterviewUiState()
     }
+
+    /**
+     * Returns the screen to its configuration state without discarding the
+     * choices the user made for the next practice session.
+     */
+    fun prepareForNewInterview() {
+        val currentState = _uiState.value
+
+        timerJob?.cancel()
+        silenceDetectionJob?.cancel()
+        timerJob = null
+        silenceDetectionJob = null
+
+        ttsEngine.stop()
+        sttEngine.stopListening()
+
+        answersTranscript.clear()
+        conversationHistory.clear()
+        onSessionCompleted = null
+
+        _uiState.value = InterviewUiState(
+            selectedDifficulty = currentState.selectedDifficulty,
+            selectedCategory = currentState.selectedCategory,
+            selectedQuestionCount = currentState.selectedQuestionCount
+        )
+    }
+
+
 
     fun startInterviewSession(
         targetRole: String,
@@ -165,9 +196,19 @@ class InterviewViewModel(application: Application) : AndroidViewModel(applicatio
             }
         }
     }
+    private fun onVoiceActivity() {
+        if (_uiState.value.interviewState == InterviewState.LISTENING ||
+            _uiState.value.interviewState == InterviewState.SILENCE_DETECTION
+        ) {
+            resetSilenceDetectionTimer()
+        }
+    }
 
     private fun startSpeechToTextListener() {
         sttEngine.startListening(
+            onVoiceActivity = {
+                onVoiceActivity()
+            },
             onResults = { result ->
                 _uiState.update { it.copy(userTranscript = result) }
                 resetSilenceDetectionTimer()
@@ -209,7 +250,7 @@ class InterviewViewModel(application: Application) : AndroidViewModel(applicatio
 
         silenceDetectionJob = viewModelScope.launch {
             _uiState.update { it.copy(interviewState = InterviewState.SILENCE_DETECTION) }
-            delay(5000) // 5 seconds silence threshold
+            delay(3000) // 5 seconds silence threshold
             if (_uiState.value.interviewState == InterviewState.SILENCE_DETECTION) {
                 submitUserAnswer()
             }
@@ -307,6 +348,8 @@ class InterviewViewModel(application: Application) : AndroidViewModel(applicatio
             }
         }
     }
+
+
 
     private fun evaluateSession(onCompleted: (String) -> Unit) {
 

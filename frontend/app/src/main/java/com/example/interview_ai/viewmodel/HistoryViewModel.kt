@@ -17,7 +17,9 @@ data class HistoryUiState(
     val selectedFilter: String = "All", // All, Technical, Behavioral
     val isLoading: Boolean = false,
     val isError: Boolean = false,
-    val errorMessage: String = ""
+    val errorMessage: String = "",
+    val deletingSessionId: String? = null,
+    val deleteErrorMessage: String? = null
 )
 
 class HistoryViewModel : ViewModel() {
@@ -68,6 +70,38 @@ class HistoryViewModel : ViewModel() {
         loadHistorySessions()
     }
 
+    fun deleteSession(sessionId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(deletingSessionId = sessionId, deleteErrorMessage = null) }
+            try {
+                val response = RetrofitClient.apiService.deleteReport(sessionId)
+                if (!response.isSuccessful) {
+                    throw IllegalStateException("Unable to delete this report")
+                }
+
+                _uiState.update { current ->
+                    val remainingSessions = current.sessions.filterNot { it.id == sessionId }
+                    current.copy(
+                        sessions = remainingSessions,
+                        filteredSessions = filterSessions(
+                            remainingSessions,
+                            current.searchQuery,
+                            current.selectedFilter
+                        ),
+                        deletingSessionId = null
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        deletingSessionId = null,
+                        deleteErrorMessage = e.message ?: "Couldn't delete this report. Please try again."
+                    )
+                }
+            }
+        }
+    }
+
     fun onSearchQueryChanged(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
         applyFilters()
@@ -79,15 +113,23 @@ class HistoryViewModel : ViewModel() {
     }
 
     private fun applyFilters() {
-        val query = _uiState.value.searchQuery.lowercase()
-        val filter = _uiState.value.selectedFilter
+        val current = _uiState.value
+        _uiState.update {
+            it.copy(filteredSessions = filterSessions(current.sessions, current.searchQuery, current.selectedFilter))
+        }
+    }
 
-        val filtered = _uiState.value.sessions.filter { session ->
+    private fun filterSessions(
+        sessions: List<InterviewSession>,
+        searchQuery: String,
+        selectedFilter: String
+    ): List<InterviewSession> {
+        val query = searchQuery.lowercase()
+
+        return sessions.filter { session ->
             val matchesQuery = session.role.lowercase().contains(query)
-            val matchesFilter = filter == "All" || session.category.equals(filter, ignoreCase = true)
+            val matchesFilter = selectedFilter == "All" || session.category.equals(selectedFilter, ignoreCase = true)
             matchesQuery && matchesFilter
         }
-
-        _uiState.update { it.copy(filteredSessions = filtered) }
     }
 }

@@ -199,10 +199,36 @@ const getReportById = async (req, res) => {
   }
 };
 
+const deleteReport = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const isMongoConnected = getMongoStatus();
+    let deleted = null;
+
+    if (isMongoConnected && mongoose.Types.ObjectId.isValid(req.userId) && mongoose.Types.ObjectId.isValid(id)) {
+      deleted = await Report.findOneAndDelete({ _id: id, userId: req.userId });
+    } else {
+      const reportIndex = memoryReports.findIndex(
+        report => report._id === id && report.userId === req.userId
+      );
+      if (reportIndex >= 0) {
+        deleted = memoryReports.splice(reportIndex, 1)[0];
+      }
+    }
+
+    if (!deleted) return res.status(404).json({ msg: 'Report not found' });
+    res.status(204).send();
+  } catch (err) {
+    res.status(500).json({ msg: 'Failed to delete report', error: err.message });
+  }
+};
+
 module.exports = {
   startInterview,
   nextQuestion,
   evaluateInterview,
   getHistory,
-  getReportById
+  getReportById,
+  deleteReport
 };

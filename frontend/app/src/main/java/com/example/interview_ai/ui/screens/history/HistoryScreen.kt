@@ -20,10 +20,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,14 +36,20 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -64,6 +74,7 @@ import com.example.interview_ai.theme.TextSecondary
 import com.example.interview_ai.theme.Warning
 import com.example.interview_ai.ui.components.AppTextField
 import com.example.interview_ai.ui.components.AppTopBar
+import com.example.interview_ai.ui.components.SecondaryButton
 import com.example.interview_ai.ui.components.SurfaceCard
 import com.example.interview_ai.ui.navigation.Routes
 import com.example.interview_ai.viewmodel.HistoryViewModel
@@ -74,9 +85,66 @@ fun HistoryScreen(
     viewModel: HistoryViewModel
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val colorScheme = MaterialTheme.colorScheme
+    val BackgroundDark = colorScheme.background
+    val SurfaceDark = colorScheme.surface
+    val BorderSubtle = colorScheme.outlineVariant
+    val TextPrimary = colorScheme.onBackground
+    val TextSecondary = colorScheme.onSurfaceVariant
+    val TextMuted = colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+    val PrimaryGlow = colorScheme.primary.copy(alpha = 0.16f)
+    var sessionPendingDeletion by remember { mutableStateOf<String?>(null) }
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
         viewModel.loadHistorySessions()
+    }
+
+    sessionPendingDeletion?.let { sessionId ->
+        AlertDialog(
+            onDismissRequest = { sessionPendingDeletion = null },
+            title = {
+                Text(
+                    text = "Delete report?",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = TextPrimary
+                )
+            },
+            text = {
+                Text(
+                    text = "This permanently removes this interview evaluation from your history.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteSession(sessionId)
+                        sessionPendingDeletion = null
+                    },
+                    modifier = Modifier
+                        .width(100.dp)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(AppRadius.md),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Error,
+                        contentColor = TextPrimary
+                    )
+                ) {
+                    Text("Delete", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                }
+            },
+            dismissButton = {
+                SecondaryButton(
+                    text = "Cancel",
+                    onClick = { sessionPendingDeletion = null },
+                    modifier = Modifier.width(100.dp)
+                )
+            },
+            shape = RoundedCornerShape(AppRadius.lg),
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
+        )
     }
 
     Scaffold(
@@ -87,64 +155,8 @@ fun HistoryScreen(
                 onBackClick = { navController.popBackStack() }
             )
         },
-        bottomBar = {
-    NavigationBar(
-    containerColor = SurfaceDark,
-    tonalElevation = 8.dp,
-    modifier = Modifier.border(1.dp, BorderSubtle, RoundedCornerShape(topStart = AppRadius.lg, topEnd = AppRadius.lg))
-) {
-    NavigationBarItem(
-        icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-        label = { Text("Home") },
-        selected = false,
-        onClick = {
-            navController.navigate(Routes.Dashboard.route) {
-                popUpTo(Routes.Dashboard.route) { inclusive = false }
-                launchSingleTop = true
-            }
-        },
-        colors = NavigationBarItemDefaults.colors(
-            selectedIconColor = TextPrimary,
-            unselectedIconColor = TextMuted,
-            selectedTextColor = TextPrimary,
-            unselectedTextColor = TextMuted,
-            indicatorColor = Primary
-        )
-    )
-    NavigationBarItem(
-        icon = { Icon(Icons.Default.Refresh, contentDescription = "History") },
-        label = { Text("History") },
-        selected = true,
-        onClick = { /* Already on History */ },
-        colors = NavigationBarItemDefaults.colors(
-            selectedIconColor = TextPrimary,
-            unselectedIconColor = TextMuted,
-            selectedTextColor = TextPrimary,
-            unselectedTextColor = TextMuted,
-            indicatorColor = Primary
-        )
-    )
-    NavigationBarItem(
-        icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-        label = { Text("Profile") },
-        selected = false,
-        onClick = {
-            navController.navigate(Routes.Profile.route) {
-                popUpTo(Routes.Dashboard.route) { inclusive = false }
-                launchSingleTop = true
-            }
-        },
-        colors = NavigationBarItemDefaults.colors(
-            selectedIconColor = TextPrimary,
-            unselectedIconColor = TextMuted,
-            selectedTextColor = TextPrimary,
-            unselectedTextColor = TextMuted,
-            indicatorColor = Primary
-        )
-    )
-}
-},
-        containerColor = BackgroundDark
+        bottomBar = { BottomNavBar(navController) },
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -152,12 +164,24 @@ fun HistoryScreen(
                 .padding(innerPadding)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(PrimaryGlow, BackgroundDark, BackgroundDark),
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                            MaterialTheme.colorScheme.background,
+                            MaterialTheme.colorScheme.background
+                        ),
                         radius = 1200f
                     )
                 )
                 .padding(AppSpacing.lg)
         ) {
+            uiState.deleteErrorMessage?.let { message ->
+                Text(
+                    text = message,
+                    color = Error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(bottom = AppSpacing.sm)
+                )
+            }
             // Search Input Field
             AppTextField(
                 value = uiState.searchQuery,
@@ -312,6 +336,17 @@ fun HistoryScreen(
                                         color = badgeColor
                                     )
                                 }
+
+                                IconButton(
+                                    onClick = { sessionPendingDeletion = session.id },
+                                    enabled = uiState.deletingSessionId != session.id
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Delete ${session.role} report",
+                                        tint = if (uiState.deletingSessionId == session.id) TextMuted else Error
+                                    )
+                                }
                             }
 
                             if (index < uiState.filteredSessions.size - 1) {
@@ -331,10 +366,23 @@ fun HistoryScreen(
 
 @Composable
 fun HistoryLoadingSkeleton() {
+    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "historyShimmer")
+    val alphaAnim by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.8f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(1000, easing = androidx.compose.animation.core.LinearEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
+    val colorScheme = MaterialTheme.colorScheme
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(AppSpacing.md),
+            .padding(AppSpacing.md)
+            .graphicsLayer(alpha = alphaAnim),
         verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)
     ) {
         repeat(5) {
@@ -350,11 +398,7 @@ fun HistoryLoadingSkeleton() {
                         modifier = Modifier
                             .size(20.dp)
                             .clip(RoundedCornerShape(AppRadius.sm))
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(SurfaceVariantDark, BorderSubtle, SurfaceVariantDark)
-                                )
-                            )
+                            .background(colorScheme.onSurface.copy(alpha = 0.08f))
                     )
                     Spacer(modifier = Modifier.width(AppSpacing.md))
                     Column {
@@ -363,7 +407,7 @@ fun HistoryLoadingSkeleton() {
                                 .fillMaxWidth(0.55f)
                                 .height(12.dp)
                                 .clip(RoundedCornerShape(AppRadius.full))
-                                .background(SurfaceVariantDark)
+                                .background(colorScheme.onSurface.copy(alpha = 0.1f))
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Box(
@@ -371,7 +415,7 @@ fun HistoryLoadingSkeleton() {
                                 .fillMaxWidth(0.3f)
                                 .height(9.dp)
                                 .clip(RoundedCornerShape(AppRadius.full))
-                                .background(BorderSubtle)
+                                .background(colorScheme.onSurface.copy(alpha = 0.06f))
                         )
                     }
                 }
@@ -379,10 +423,10 @@ fun HistoryLoadingSkeleton() {
                     modifier = Modifier
                         .size(width = 52.dp, height = 20.dp)
                         .clip(RoundedCornerShape(AppRadius.full))
-                        .background(SurfaceVariantDark)
+                        .background(colorScheme.onSurface.copy(alpha = 0.08f))
                 )
             }
-            if (it < 4) HorizontalDivider(color = BorderSubtle, thickness = 1.dp)
+            if (it < 4) HorizontalDivider(color = colorScheme.outlineVariant, thickness = 1.dp)
         }
     }
 }

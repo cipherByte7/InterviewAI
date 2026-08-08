@@ -4,8 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.example.interview_ai.theme.InterviewAITheme
 import com.example.interview_ai.ui.navigation.AppNavGraph
+import com.example.interview_ai.viewmodel.ThemeViewModel
 
 class MainActivity : ComponentActivity() {
 
@@ -13,13 +17,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
+            val themeViewModel: ThemeViewModel = viewModel()
+            val themeMode by themeViewModel.themeMode.collectAsState()
 
-            InterviewAITheme {
+            InterviewAITheme(themeMode = themeMode) {
 
                 val navController = rememberNavController()
 
                 AppNavGraph(
-                    navController = navController
+                    navController = navController,
+                    themeViewModel = themeViewModel
                 )
 
             }

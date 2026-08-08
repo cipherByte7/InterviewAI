@@ -18,6 +18,7 @@ import com.example.interview_ai.viewmodel.DashboardViewModel
 import com.example.interview_ai.viewmodel.InterviewViewModel
 import com.example.interview_ai.viewmodel.ReportViewModel
 import com.example.interview_ai.viewmodel.HistoryViewModel
+import com.example.interview_ai.viewmodel.ThemeViewModel
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 
@@ -28,15 +29,44 @@ fun AppNavGraph(
     dashboardViewModel: DashboardViewModel = viewModel(),
     interviewViewModel: InterviewViewModel = viewModel(),
     reportViewModel: ReportViewModel = viewModel(),
-    historyViewModel: HistoryViewModel = viewModel()
+    historyViewModel: HistoryViewModel = viewModel(),
+    themeViewModel: ThemeViewModel = viewModel()
 ) {
 
     NavHost(
         navController = navController,
-        startDestination = Routes.Splash.route
+        startDestination = Routes.Splash.route,
+        enterTransition = {
+            androidx.compose.animation.slideInHorizontally(
+                initialOffsetX = { 300 },
+                animationSpec = androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+            ) + androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(300))
+        },
+        exitTransition = {
+            androidx.compose.animation.slideOutHorizontally(
+                targetOffsetX = { -300 },
+                animationSpec = androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+            ) + androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(300))
+        },
+        popEnterTransition = {
+            androidx.compose.animation.slideInHorizontally(
+                initialOffsetX = { -300 },
+                animationSpec = androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+            ) + androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(300))
+        },
+        popExitTransition = {
+            androidx.compose.animation.slideOutHorizontally(
+                targetOffsetX = { 300 },
+                animationSpec = androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+            ) + androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(300))
+        }
     ) {
 
-        composable(Routes.Splash.route) {
+        composable(
+            route = Routes.Splash.route,
+            enterTransition = { androidx.compose.animation.EnterTransition.None },
+            exitTransition = { androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(400)) }
+        ) {
             SplashScreen(navController)
         }
 
@@ -64,13 +94,11 @@ fun AppNavGraph(
                 }
             )
         ) { backStackEntry ->
-
-            val reportId =
-                backStackEntry.arguments?.getString("reportId") ?: ""
-
+            val reportId = backStackEntry.arguments?.getString("reportId") ?: ""
             ReportScreen(
                 navController = navController,
                 viewModel = reportViewModel,
+                interviewViewModel = interviewViewModel,
                 reportId = reportId
             )
         }
@@ -80,7 +108,7 @@ fun AppNavGraph(
         }
 
         composable(Routes.Profile.route) {
-            ProfileScreen(navController, authViewModel, dashboardViewModel)
+            ProfileScreen(navController, authViewModel, dashboardViewModel, themeViewModel)
         }
     }
 }

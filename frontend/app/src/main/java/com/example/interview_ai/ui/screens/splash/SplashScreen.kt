@@ -46,6 +46,13 @@ import kotlinx.coroutines.delay
 fun SplashScreen(
     navController: NavHostController
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+    val BackgroundDark = colorScheme.background
+    val SurfaceVariantDark = colorScheme.surfaceVariant
+    val TextPrimary = colorScheme.onBackground
+    val TextMuted = colorScheme.onSurfaceVariant
+    val PrimaryGlow = colorScheme.primary.copy(alpha = 0.16f)
+
     val scale = remember { Animatable(0.7f) }
     val alpha = remember { Animatable(0f) }
 
@@ -100,7 +107,7 @@ fun SplashScreen(
                     .border(
                         width = 1.5.dp,
                         brush = Brush.linearGradient(
-                            colors = listOf(Primary, AccentCyan)
+                            colors = listOf(colorScheme.primary, AccentCyan)
                         ),
                         shape = CircleShape
                     ),
@@ -110,7 +117,7 @@ fun SplashScreen(
                     imageVector = Icons.Default.Star,
                     contentDescription = "InterviewAI Emblem",
                     modifier = Modifier.size(44.dp),
-                    tint = Primary
+                    tint = colorScheme.primary
                 )
             }
 
@@ -129,7 +136,10 @@ fun SplashScreen(
 
             Text(
                 text = "AI-Powered Career Co-Pilot",
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.5.sp
+                ),
                 color = TextMuted
             )
         }

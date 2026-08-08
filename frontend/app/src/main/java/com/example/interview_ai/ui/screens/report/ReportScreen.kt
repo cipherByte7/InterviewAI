@@ -36,7 +36,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -72,9 +77,20 @@ import com.example.interview_ai.viewmodel.ReportViewModel
 fun ReportScreen(
     navController: NavHostController,
     viewModel: ReportViewModel,
+    interviewViewModel: InterviewViewModel,
     reportId: String
 ){
     val uiState by viewModel.uiState.collectAsState()
+    val colorScheme = MaterialTheme.colorScheme
+    val BackgroundDark = colorScheme.background
+    val SurfaceDark = colorScheme.surface
+    val SurfaceVariantDark = colorScheme.surfaceVariant
+    val BorderSubtle = colorScheme.outlineVariant
+    val TextPrimary = colorScheme.onBackground
+    val TextSecondary = colorScheme.onSurfaceVariant
+    val TextMuted = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+    val Primary = colorScheme.primary
+    val PrimaryGlow = colorScheme.primary.copy(alpha = 0.15f)
 
     LaunchedEffect(reportId) {
         viewModel.loadEvaluationReport(reportId)
@@ -92,7 +108,7 @@ fun ReportScreen(
                 }
             )
         },
-        containerColor = BackgroundDark
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -100,7 +116,11 @@ fun ReportScreen(
                 .padding(innerPadding)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(PrimaryGlow, BackgroundDark, BackgroundDark),
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                            MaterialTheme.colorScheme.background,
+                            MaterialTheme.colorScheme.background
+                        ),
                         radius = 1200f
                     )
                 )
@@ -120,7 +140,38 @@ fun ReportScreen(
                     )
                 }
             } else {
+                if (uiState.errorMessage != null) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = uiState.errorMessage!!,
+                            color = Error
+                        )
+                    }
+                    return@Scaffold
+                }
                 uiState.report?.let { report ->
+                    val targetScore = report.overallScore
+                    var animatedScore by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+                    LaunchedEffect(targetScore) {
+                        androidx.compose.animation.core.Animatable(0f).animateTo(
+                            targetValue = targetScore.toFloat(),
+                            animationSpec = tween(1200, easing = FastOutSlowInEasing)
+                        ) {
+                            animatedScore = this.value.toInt()
+                        }
+                    }
+
+                    val progressAnimateFraction = remember { androidx.compose.animation.core.Animatable(0f) }
+                    LaunchedEffect(report) {
+                        progressAnimateFraction.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(1400, easing = FastOutSlowInEasing)
+                        )
+                    }
+
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -177,7 +228,7 @@ fun ReportScreen(
                                 ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Text(
-                                            text = "${report.overallScore}",
+                                            text = "$animatedScore",
                                             style = MaterialTheme.typography.headlineMedium.copy(
                                                 fontWeight = FontWeight.Bold,
                                                 color = Success
@@ -235,7 +286,7 @@ fun ReportScreen(
                                         Spacer(modifier = Modifier.height(AppSpacing.sm))
 
                                         LinearProgressIndicator(
-                                            progress = { dim.score / 100f },
+                                            progress = { (dim.score / 100f) * progressAnimateFraction.value },
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .height(6.dp),
@@ -396,11 +447,9 @@ fun ReportScreen(
                             PrimaryButton(
                                 text = "Practice Again",
                                 onClick = {
-
+                                    interviewViewModel.prepareForNewInterview()
                                     navController.navigate(Routes.Interview.route) {
-                                        popUpTo(Routes.Report.route) {
-                                            inclusive = true
-                                        }
+                                        popUpTo(Routes.Interview.route) { inclusive = true }
                                     }
                                 }
                             )

@@ -12,6 +12,7 @@ import retrofit2.http.PUT
 import retrofit2.http.Multipart
 import retrofit2.http.Part
 import retrofit2.http.Path
+import retrofit2.Response
 
 // Request/Response DTOs
 data class RegisterRequest(
@@ -143,4 +144,7 @@ interface InterviewApiService {
 
     @GET("api/interview/report/{id}")
     suspend fun getReport(@Path("id") id: String): EvaluationReport
+
+    @DELETE("api/interview/report/{id}")
+    suspend fun deleteReport(@Path("id") id: String): Response<Unit>
 }

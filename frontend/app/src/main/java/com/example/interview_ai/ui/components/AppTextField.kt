@@ -42,13 +42,17 @@ fun AppTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            color = TextSecondary
-        )
-        Spacer(modifier = Modifier.height(AppSpacing.xs))
+        if (label.isNotEmpty()) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(AppSpacing.xs))
+        }
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
@@ -58,7 +62,7 @@ fun AppTextField(
                     Text(
                         text = placeholder,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextMuted
+                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
                 }
             },
@@ -70,20 +74,20 @@ fun AppTextField(
             keyboardOptions = keyboardOptions,
             keyboardActions = keyboardActions,
             shape = RoundedCornerShape(AppRadius.md),
-            textStyle = MaterialTheme.typography.bodyLarge.copy(color = TextPrimary),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = colorScheme.onSurface),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = SurfaceDark,
-                unfocusedContainerColor = SurfaceDark,
-                disabledContainerColor = SurfaceDark.copy(alpha = 0.5f),
-                errorContainerColor = SurfaceDark,
-                focusedBorderColor = Primary,
-                unfocusedBorderColor = BorderSubtle,
-                disabledBorderColor = BorderSubtle.copy(alpha = 0.5f),
-                errorBorderColor = Error,
-                focusedLeadingIconColor = Primary,
-                unfocusedLeadingIconColor = TextMuted,
-                focusedTrailingIconColor = TextPrimary,
-                unfocusedTrailingIconColor = TextMuted
+                focusedContainerColor = colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                unfocusedContainerColor = colorScheme.surfaceVariant.copy(alpha = 0.15f),
+                disabledContainerColor = colorScheme.surfaceVariant.copy(alpha = 0.05f),
+                errorContainerColor = colorScheme.surfaceVariant.copy(alpha = 0.15f),
+                focusedBorderColor = colorScheme.primary,
+                unfocusedBorderColor = colorScheme.outlineVariant,
+                disabledBorderColor = colorScheme.outlineVariant.copy(alpha = 0.5f),
+                errorBorderColor = colorScheme.error,
+                focusedLeadingIconColor = colorScheme.primary,
+                unfocusedLeadingIconColor = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                focusedTrailingIconColor = colorScheme.onSurface,
+                unfocusedTrailingIconColor = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
             )
         )
         if (errorMessage != null) {
@@ -91,7 +95,7 @@ fun AppTextField(
             Text(
                 text = errorMessage,
                 style = MaterialTheme.typography.bodySmall,
-                color = Error
+                color = colorScheme.error
             )
         }
     }

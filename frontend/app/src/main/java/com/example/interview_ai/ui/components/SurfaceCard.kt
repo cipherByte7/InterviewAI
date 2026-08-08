@@ -13,14 +13,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.interview_ai.theme.AppRadius
 import com.example.interview_ai.theme.AppSpacing
-import com.example.interview_ai.theme.BorderSubtle
-import com.example.interview_ai.theme.SurfaceDark
+import androidx.compose.material3.MaterialTheme
 
 @Composable
 fun SurfaceCard(
     modifier: Modifier = Modifier,
-    backgroundColor: Color = SurfaceDark,
-    borderColor: Color = BorderSubtle,
+    backgroundColor: Color = MaterialTheme.colorScheme.surface,
+    borderColor: Color = MaterialTheme.colorScheme.outlineVariant,
     borderWidth: Dp = 1.dp,
     cornerRadius: Dp = AppRadius.lg,
     padding: Dp = AppSpacing.lg,

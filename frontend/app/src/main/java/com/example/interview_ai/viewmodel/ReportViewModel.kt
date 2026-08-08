@@ -31,6 +31,7 @@ class ReportViewModel : ViewModel() {
             _uiState.update { it.copy(isLoading = true) }
             try {
                 // Fetch reports list from backend API
+                android.util.Log.d("REPORT_DEBUG", "ReportId = $reportId")
                 val report = RetrofitClient.apiService.getReport(reportId)
 
                 _uiState.update {
@@ -41,8 +42,14 @@ class ReportViewModel : ViewModel() {
                     )
                 }
             } catch (e: Exception) {
-                // Connection/Server failure, fallback to mock details
-                loadFallbackReport()
+                android.util.Log.e("REPORT_DEBUG", "Failed to load report", e)
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    report = null,
+                    errorMessage = e.message ?: "Failed to load report"
+                )
+            }
             }
         }
     }

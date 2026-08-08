@@ -16,13 +16,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
 import com.example.interview_ai.theme.AppRadius
 import com.example.interview_ai.theme.AppSpacing
-import com.example.interview_ai.theme.BorderHighlight
-import com.example.interview_ai.theme.BorderSubtle
-import com.example.interview_ai.theme.SurfaceDark
-import com.example.interview_ai.theme.TextPrimary
-import com.example.interview_ai.theme.TextSecondary
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.graphicsLayer
 
 @Composable
 fun SecondaryButton(
@@ -32,19 +34,27 @@ fun SecondaryButton(
     enabled: Boolean = true,
     leadingIcon: (@Composable () -> Unit)? = null
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (isPressed) 0.96f else 1f, label = "secondaryButtonScale")
+
+    val colorScheme = MaterialTheme.colorScheme
+
     OutlinedButton(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .height(52.dp),
+            .height(52.dp)
+            .graphicsLayer(scaleX = scale, scaleY = scale),
         enabled = enabled,
         shape = RoundedCornerShape(AppRadius.md),
-        border = BorderStroke(1.dp, if (enabled) BorderHighlight else BorderSubtle),
+        interactionSource = interactionSource,
+        border = BorderStroke(1.dp, if (enabled) colorScheme.outline else colorScheme.outlineVariant),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = SurfaceDark,
-            contentColor = TextPrimary,
-            disabledContainerColor = SurfaceDark.copy(alpha = 0.5f),
-            disabledContentColor = TextSecondary.copy(alpha = 0.4f)
+            containerColor = colorScheme.surface,
+            contentColor = colorScheme.onSurface,
+            disabledContainerColor = colorScheme.surface.copy(alpha = 0.5f),
+            disabledContentColor = colorScheme.onSurface.copy(alpha = 0.4f)
         ),
         contentPadding = PaddingValues(horizontal = AppSpacing.lg, vertical = AppSpacing.md)
     ) {
@@ -57,8 +67,8 @@ fun SecondaryButton(
             }
             Text(
                 text = text,
-                style = MaterialTheme.typography.titleMedium,
-                color = if (enabled) TextPrimary else TextSecondary.copy(alpha = 0.4f)
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = if (enabled) colorScheme.onSurface else colorScheme.onSurface.copy(alpha = 0.4f)
             )
         }
     }

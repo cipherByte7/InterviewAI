@@ -84,14 +84,26 @@ fun InterviewScreen(
     interviewViewModel: InterviewViewModel,
     dashboardViewModel: DashboardViewModel
 ) {
+
     val uiState by interviewViewModel.uiState.collectAsState()
     val dashState by dashboardViewModel.uiState.collectAsState()
-
     val targetRole = dashState.parsedResume?.parsedRole ?: dashState.targetRole
     val skills = dashState.parsedResume?.skills ?: emptyList()
     val resumeName = dashState.uploadedResumeName
 
     val context = LocalContext.current
+
+    val colorScheme = MaterialTheme.colorScheme
+    val BackgroundDark = colorScheme.background
+    val SurfaceDark = colorScheme.surface
+    val SurfaceVariantDark = colorScheme.surfaceVariant
+    val BorderSubtle = colorScheme.outlineVariant
+    val TextPrimary = colorScheme.onBackground
+    val TextSecondary = colorScheme.onSurfaceVariant
+    val TextMuted = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+    val Primary = colorScheme.primary
+    val PrimaryGlow = colorScheme.primary.copy(alpha = 0.15f)
+
     var hasAudioPermission by remember {
         mutableStateOf(
             androidx.core.content.ContextCompat.checkSelfPermission(
@@ -124,7 +136,7 @@ fun InterviewScreen(
                 )
             }
         },
-        containerColor = BackgroundDark
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -133,9 +145,9 @@ fun InterviewScreen(
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            PrimaryGlow,
-                            BackgroundDark,
-                            BackgroundDark
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                            MaterialTheme.colorScheme.background,
+                            MaterialTheme.colorScheme.background
                         ),
                         radius = 1200f
                     )
@@ -175,8 +187,8 @@ fun InterviewScreen(
                             uiState = uiState,
                             onPauseToggle = { interviewViewModel.togglePause() },
                             onFinish = {
-                                interviewViewModel.finishInterview {
-                                    navController.navigate(com.example.interview_ai.ui.navigation.Routes.Report.route) {
+                                interviewViewModel.finishInterview { reportId ->
+                                    navController.navigate(com.example.interview_ai.ui.navigation.Routes.Report.createRoute(reportId)) {
                                         popUpTo(com.example.interview_ai.ui.navigation.Routes.Interview.route) { inclusive = true }
                                     }
                                 }
@@ -204,6 +216,19 @@ fun ConfiguringContent(
     onCountChange: (Int) -> Unit,
     onGenerate: () -> Unit
 ) {
+
+    val colorScheme = MaterialTheme.colorScheme
+    val BackgroundDark = colorScheme.background
+    val SurfaceDark = colorScheme.surface
+    val SurfaceVariantDark = colorScheme.surfaceVariant
+    val BorderSubtle = colorScheme.outlineVariant
+    val TextPrimary = colorScheme.onBackground
+    val TextSecondary = colorScheme.onSurfaceVariant
+    val TextMuted = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+    val Primary = colorScheme.primary
+    val PrimaryGlow = colorScheme.primary.copy(alpha = 0.15f)
+    val AccentCyan = colorScheme.secondary
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -399,6 +424,15 @@ fun ActiveInterviewContent(
     onPauseToggle: () -> Unit,
     onFinish: () -> Unit
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+    val Primary = colorScheme.primary
+    val TextPrimary = colorScheme.onBackground
+    val TextSecondary = colorScheme.onSurfaceVariant
+    val TextMuted = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+    val BorderSubtle = colorScheme.outlineVariant
+    val AccentCyan = colorScheme.secondary
+    val SurfaceDark = colorScheme.surface
+
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 1f,

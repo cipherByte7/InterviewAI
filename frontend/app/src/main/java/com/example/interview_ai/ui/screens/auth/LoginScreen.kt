@@ -62,6 +62,12 @@ fun LoginScreen(
     authViewModel: AuthViewModel
 ) {
     val uiState by authViewModel.uiState.collectAsState()
+    val colorScheme = MaterialTheme.colorScheme
+    val BackgroundDark = colorScheme.background
+    val TextPrimary = colorScheme.onBackground
+    val TextSecondary = colorScheme.onSurfaceVariant
+    val TextMuted = colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+    val PrimaryGlow = colorScheme.primary.copy(alpha = 0.16f)
 
     LaunchedEffect(uiState.isAuthenticated) {
         if (uiState.isAuthenticated) {

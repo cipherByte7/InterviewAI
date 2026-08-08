@@ -29,6 +29,9 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -69,22 +72,36 @@ import com.example.interview_ai.theme.TextPrimary
 import com.example.interview_ai.theme.TextSecondary
 import com.example.interview_ai.ui.components.AppTextField
 import com.example.interview_ai.ui.components.AppTopBar
+import com.example.interview_ai.ui.components.BottomNavBar
 import com.example.interview_ai.ui.components.PrimaryButton
 import com.example.interview_ai.ui.components.SecondaryButton
 import com.example.interview_ai.ui.components.SurfaceCard
 import com.example.interview_ai.ui.navigation.Routes
 import com.example.interview_ai.viewmodel.AuthViewModel
 import com.example.interview_ai.viewmodel.DashboardViewModel
+import com.example.interview_ai.viewmodel.ThemeViewModel
+import com.example.interview_ai.data.preferences.ThemeMode
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProfileScreen(
     navController: NavHostController,
     authViewModel: AuthViewModel,
-    dashboardViewModel: DashboardViewModel
+    dashboardViewModel: DashboardViewModel,
+    themeViewModel: ThemeViewModel
 ) {
     val authState by authViewModel.uiState.collectAsState()
     val dashboardState by dashboardViewModel.uiState.collectAsState()
+    val selectedTheme by themeViewModel.themeMode.collectAsState()
+    val colorScheme = MaterialTheme.colorScheme
+    val BackgroundDark = colorScheme.background
+    val SurfaceDark = colorScheme.surface
+    val SurfaceVariantDark = colorScheme.surfaceVariant
+    val BorderSubtle = colorScheme.outlineVariant
+    val TextPrimary = colorScheme.onBackground
+    val TextSecondary = colorScheme.onSurfaceVariant
+    val TextMuted = colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+    val PrimaryGlow = colorScheme.primary.copy(alpha = 0.16f)
 
     var showEditRoleDialog by remember { mutableStateOf(false) }
     var newRoleInput by remember { mutableStateOf("") }
@@ -97,64 +114,8 @@ fun ProfileScreen(
                 onBackClick = { navController.popBackStack() }
             )
         },
-        bottomBar = {
-    NavigationBar(
-    containerColor = SurfaceDark,
-    tonalElevation = 8.dp,
-    modifier = Modifier.border(1.dp, BorderSubtle, RoundedCornerShape(topStart = AppRadius.lg, topEnd = AppRadius.lg))
-) {
-    NavigationBarItem(
-        icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-        label = { Text("Home") },
-        selected = false,
-        onClick = {
-            navController.navigate(Routes.Dashboard.route) {
-                popUpTo(Routes.Dashboard.route) { inclusive = false }
-                launchSingleTop = true
-            }
-        },
-        colors = NavigationBarItemDefaults.colors(
-            selectedIconColor = TextPrimary,
-            unselectedIconColor = TextMuted,
-            selectedTextColor = TextPrimary,
-            unselectedTextColor = TextMuted,
-            indicatorColor = Primary
-        )
-    )
-    NavigationBarItem(
-        icon = { Icon(Icons.Default.Refresh, contentDescription = "History") },
-        label = { Text("History") },
-        selected = false,
-        onClick = {
-            navController.navigate(Routes.History.route) {
-                popUpTo(Routes.Dashboard.route) { inclusive = false }
-                launchSingleTop = true
-            }
-        },
-        colors = NavigationBarItemDefaults.colors(
-            selectedIconColor = TextPrimary,
-            unselectedIconColor = TextMuted,
-            selectedTextColor = TextPrimary,
-            unselectedTextColor = TextMuted,
-            indicatorColor = Primary
-        )
-    )
-    NavigationBarItem(
-        icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-        label = { Text("Profile") },
-        selected = true,
-        onClick = { /* Already on Profile */ },
-        colors = NavigationBarItemDefaults.colors(
-            selectedIconColor = TextPrimary,
-            unselectedIconColor = TextMuted,
-            selectedTextColor = TextPrimary,
-            unselectedTextColor = TextMuted,
-            indicatorColor = Primary
-        )
-    )
-}
-},
-        containerColor = BackgroundDark
+        bottomBar = { BottomNavBar(navController) },
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -162,7 +123,11 @@ fun ProfileScreen(
                 .padding(innerPadding)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(PrimaryGlow, BackgroundDark, BackgroundDark),
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                            MaterialTheme.colorScheme.background,
+                            MaterialTheme.colorScheme.background
+                        ),
                         radius = 1200f
                     )
                 )
@@ -274,6 +239,52 @@ fun ProfileScreen(
                                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                                 color = Primary
                             )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(AppSpacing.lg))
+
+                SurfaceCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    padding = AppSpacing.md
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "APP THEME",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "${selectedTheme.displayName()} selected",
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            Icon(
+                                imageVector = selectedTheme.icon(),
+                                contentDescription = "${selectedTheme.displayName()} theme",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(AppSpacing.md))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm)
+                        ) {
+                            ThemeOption(ThemeMode.LIGHT, selectedTheme, { themeViewModel.setThemeMode(it) }, Modifier.weight(1f))
+                            ThemeOption(ThemeMode.DARK, selectedTheme, { themeViewModel.setThemeMode(it) }, Modifier.weight(1f))
+                            ThemeOption(ThemeMode.SYSTEM, selectedTheme, { themeViewModel.setThemeMode(it) }, Modifier.weight(1f))
                         }
                     }
                 }
@@ -510,8 +521,59 @@ fun ProfileScreen(
                     modifier = Modifier.width(90.dp)
                 )
             },
-            containerColor = SurfaceDark,
+            containerColor = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp
         )
     }
+}
+
+@Composable
+private fun ThemeOption(
+    themeMode: ThemeMode,
+    selectedTheme: ThemeMode,
+    onSelected: (ThemeMode) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isSelected = themeMode == selectedTheme
+    val colors = MaterialTheme.colorScheme
+    Column(
+        modifier = modifier
+            .background(
+                if (isSelected) colors.primary.copy(alpha = 0.14f) else colors.surfaceVariant,
+                RoundedCornerShape(AppRadius.md)
+            )
+            .border(
+                1.dp,
+                if (isSelected) colors.primary else colors.outlineVariant,
+                RoundedCornerShape(AppRadius.md)
+            )
+            .clickable { onSelected(themeMode) }
+            .padding(vertical = AppSpacing.md),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = themeMode.icon(),
+            contentDescription = themeMode.displayName(),
+            tint = if (isSelected) colors.primary else colors.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.height(AppSpacing.xs))
+        Text(
+            text = themeMode.displayName(),
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+            color = if (isSelected) colors.primary else colors.onSurfaceVariant
+        )
+    }
+}
+
+private fun ThemeMode.displayName(): String = when (this) {
+    ThemeMode.LIGHT -> "Light"
+    ThemeMode.DARK -> "Dark"
+    ThemeMode.SYSTEM -> "System"
+}
+
+private fun ThemeMode.icon() = when (this) {
+    ThemeMode.LIGHT -> Icons.Default.LightMode
+    ThemeMode.DARK -> Icons.Default.DarkMode
+    ThemeMode.SYSTEM -> Icons.Default.PhoneAndroid
 }
