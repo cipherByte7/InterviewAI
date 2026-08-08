@@ -1,101 +1,381 @@
-# InterviewAI 🎙️🤖
+# 🎙️ InterviewAI – AI Powered Mock Interview Platform
 
-InterviewAI is a production-grade, full-stack Android application designed to help job seekers prepare for technical and HR engineering loops using generative artificial intelligence. 
+<div align="center">
 
-The application conducts voice-based mock interviews, parses uploaded PDF resumes, generates tailored question sets, and evaluates candidate performance across multiple communication and technical dimensions using the **Google Gemini API**.
+![Android](https://img.shields.io/badge/Android-Jetpack%20Compose-3DDC84?logo=android)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7F52FF?logo=kotlin)
+![Node.js](https://img.shields.io/badge/Backend-Node.js-339933?logo=node.js)
+![Express](https://img.shields.io/badge/Framework-Express.js-000000?logo=express)
+![MongoDB](https://img.shields.io/badge/Database-MongoDB-47A248?logo=mongodb)
+![OpenRouter](https://img.shields.io/badge/AI-OpenRouter-blue)
+![Render](https://img.shields.io/badge/Deployment-Render-46E3B7)
+
+### An AI-powered Android application that conducts adaptive voice-based mock interviews using resume-aware question generation and AI-generated performance evaluation.
+
+</div>
 
 ---
 
-## 📸 Architectural Overview
+# 🚀 Key Highlights
 
-The project is modularized into two primary subdirectories: `frontend/` (Native Jetpack Compose Android Client) and `backend/` (NodeJS Express API server).
+- 🤖 AI-powered adaptive mock interviews
+- 📄 Resume-aware question generation using AI
+- 🎤 Speech-to-Text + Text-to-Speech interview experience
+- 📊 AI-generated interview evaluation and action plan
+- ☁️ Cloud backend deployed on Render
+- 🗄️ MongoDB Atlas for persistent cloud storage
+- 🔐 JWT Authentication
+- 📚 Interview history with detailed evaluation reports
+- 🎨 Modern Material 3 UI with Light & Dark Theme support
 
-```mermaid
-graph TD
-    subgraph Mobile Client [Android Frontend]
-        A[Jetpack Compose UI] -->|Observe State| B[StateFlow ViewModels]
-        B -->|Audio Playback| C[TextToSpeech Engine]
-        D[SpeechToText Engine] -->|Voice Captures| B
-        B -->|REST Requests| E[Retrofit Client]
-    end
+---
 
-    subgraph Service Backend [NodeJS Server]
-        E -->|HTTP Requests| F[Express Application]
-        F -->|JWT Verification| G[Auth Middleware]
-        F -->|Save Metrics| H[(MongoDB Schema)]
-        F -->|Prompt Engineering| I[Gemini API Client]
-    end
+# 📱 Screenshots
 
-    I -->|Structured JSON Responses| F
-    F -->|REST JSON DTO Payload| E
+> All screenshots are captured in the application's Dark Theme.
+
+| Splash | Login | Register |
+|---------|--------|----------|
+| ![](screenshots/splash.png) | ![](screenshots/login.png) | ![](screenshots/register.png) |
+
+| Dashboard | Resume Upload | Interview Configuration |
+|------------|---------------|-------------------------|
+| ![](screenshots/dashboard.png) | ![](screenshots/upload_resume.png) | ![](screenshots/configure_interview.png) |
+
+| Live Interview | AI Evaluation | History |
+|----------------|---------------|---------|
+| ![](screenshots/interview.png) | ![](screenshots/report.png) | ![](screenshots/history.png) |
+
+| Profile |
+|----------|
+| ![](screenshots/profile.png) |
+
+---
+
+# ✨ Features
+
+## 🔐 Authentication
+
+- Secure User Registration
+- JWT Login Authentication
+- Persistent User Sessions
+- Secure API Authorization
+
+---
+
+## 📄 Resume Intelligence
+
+- Upload Resume (PDF)
+- AI Resume Parsing
+- Automatic Skill Extraction
+- Target Role Identification
+- Resume-aware Interview Generation
+
+---
+
+## 🎤 AI Mock Interview
+
+- Voice-based Interview Experience
+- Speech-to-Text Transcription
+- Text-to-Speech AI Interviewer
+- Adaptive Follow-up Questions
+- Technical Interview Mode
+- Behavioral Interview Mode
+- Mixed Interview Mode
+- Configurable Difficulty Levels
+- Configurable Number of Questions
+
+---
+
+## 📊 AI Evaluation Report
+
+Every interview generates a detailed AI evaluation including:
+
+- Overall Performance Score
+- Technical Knowledge
+- Communication Skills
+- Confidence
+- Speaking Fluency
+- Resume Match
+- Strengths
+- Weaknesses
+- Personalized AI Action Plan
+
+---
+
+## 📚 Interview History
+
+- View Previous Interviews
+- Search Interview Sessions
+- Filter by Interview Type
+- Open Detailed Reports
+- Persistent Cloud Storage
+
+---
+
+## 🎨 Modern UI
+
+- Material 3 Design
+- Light & Dark Theme
+- Responsive Layout
+- Animated Interview Orb
+- Glassmorphism Inspired Cards
+- Modern Dashboard
+- Smooth Navigation
+
+---
+
+# 🏗️ System Architecture
+
+```
+                     Android Application
+                             │
+                             │
+                       Retrofit REST API
+                             │
+                    Node.js + Express Server
+                             │
+       ┌─────────────────────┴──────────────────────┐
+       │                                            │
+       │                                            │
+MongoDB Atlas                               OpenRouter AI
+       │                                            │
+       │                                            │
+Users                                      Resume Parsing
+Reports                                    Question Generation
+Interview History                          Interview Evaluation
 ```
 
 ---
 
-## ✨ Features
+# 🛠️ Tech Stack
 
-*   **Secure Authentication (Phase 2)**: Secure user sign-up and log-in pages storing credentials inside MongoDB using bcrypt hashing. Sessions are cached locally via Jetpack DataStore preferences.
-*   **Analytics Dashboard (Phase 3 & 4)**: Overview of overall readiness percentage, practice duration metrics, previous sessions histories, and a customized PDF resume picker.
-*   **Resume Parsing & Questions Creator (Phase 5)**: Upload a resume to automatically extract programming expertise keywords (Kotlin, Hilt, Compose, etc.) and generate questions tailored to the candidate's target role, selected difficulty, and category.
-*   **Active Voice Mock Session (Phase 6)**: Immersive practice screen with a glowing orbital visualizer pulsing dynamically matching speech states.
-    *   **Text-to-Speech (TTS)**: The AI interviewer reads questions aloud.
-    *   **Speech-to-Text (STT)**: The microphone listener converts candidate spoken answers into streaming transcripts in real-time.
-*   **AI Performance Report (Phase 7)**: Aggregates performance scores across 4 key dimensions: *Technical Accuracy*, *Communication Clarity*, *Depth of Knowledge*, and *Confidence & Articulation*. Details exact strengths, weaknesses, and a custom action plan.
-*   **Practice History & Profile (Phase 8)**: Dedicated history portal with real-time query search filters and custom target role configuration editors.
+## Android
 
----
-
-## 🛡️ Production-Grade Resiliency (Offline Bypass Mode)
-
-To ensure the application never blocks the developer or user, we implemented robust dual-layer offline fallbacks:
-
-1.  **Offline Database Bypass**: If the server fails to connect to MongoDB on startup, it automatically transitions to a fast **In-Memory Cache Database**. Auth registration, login, and report submissions will continue functioning seamlessly.
-2.  **Offline API Client Fallback**: If the Android app cannot reach the server host address (e.g. connection timeout on physical USB devices), the viewmodel catches the network exception, prompts a warning banner (*"Server offline: Running in offline mock mode"*), and **automatically proceeds to the dashboard**, enabling full application testing offline.
+- Kotlin
+- Jetpack Compose
+- MVVM Architecture
+- StateFlow
+- Kotlin Coroutines
+- Retrofit
+- Material 3
 
 ---
 
-## 🛠️ Tech Stack
+## Backend
 
-### Frontend (Android)
-*   **Kotlin** & **Jetpack Compose**: Modern declarative interface layers.
-*   **Material 3**: Design system tokens for custom dark schemas.
-*   **Navigation Compose**: Sealed string route transition controllers.
-*   **DataStore Preferences**: JWT tokens and role configurations caching.
-*   **Retrofit & OkHttp**: Networking client with JWT header injectors.
-
-### Backend & AI
-*   **Node.js** & **Express**: Lightweight HTTP server routing.
-*   **MongoDB** & **Mongoose**: Relational collection database schemas.
-*   **Google Gemini API**: Generative prompt models engineering.
+- Node.js
+- Express.js
+- JWT Authentication
+- Multer
+- Mongoose
+- MongoDB Atlas
 
 ---
 
-## 🚀 Setup & Execution Guide
+## Artificial Intelligence
 
-### 1. Run Backend Server
-Ensure you have Node.js and MongoDB installed locally.
+- OpenRouter API
+- Resume Parsing
+- Adaptive Question Generation
+- AI Performance Evaluation
 
-1.  Navigate into the backend directory:
-    ```bash
-    cd backend
-    ```
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-3.  Configure your Gemini API Key in the `.env` configuration file:
-    ```env
-    GEMINI_API_KEY=AIzaSyD-your-copied-key-here
-    ```
-    *(If left blank, the server automatically defaults to high-fidelity mock AI responses).*
-4.  Start the Node.js Express server:
-    ```bash
-    npm start
-    ```
-    The console will log: `InterviewAI Server launched on port 5000`.
+---
 
-### 2. Run Android App
-1.  Open the `frontend` folder in **Android Studio**.
-2.  Sync Gradle dependencies.
-3.  Connect an Android device or launch an emulator (API 24+).
-4.  Run the `app` configuration. The client communicates directly with the local host server via the standard emulator network bridge (`10.0.2.2:5000`).
+## Deployment
+
+- Render
+- MongoDB Atlas
+
+---
+
+# 📂 Project Structure
+
+```
+InterviewAI
+
+├── frontend
+│
+│   ├── data
+│   ├── navigation
+│   ├── theme
+│   ├── ui
+│   ├── utils
+│   └── viewmodel
+│
+├── backend
+│
+│   ├── config
+│   ├── controllers
+│   ├── middleware
+│   ├── models
+│   ├── routes
+│   ├── services
+│   └── server.js
+│
+├── screenshots
+│
+└── README.md
+```
+
+---
+
+# 🚀 Getting Started
+
+## Clone Repository
+
+```bash
+git clone https://github.com/cipherByte7/InterviewAI.git
+
+cd InterviewAI
+```
+
+---
+
+## Backend Setup
+
+```bash
+cd backend
+
+npm install
+```
+
+Create a `.env` file:
+
+```env
+MONGO_URI=YOUR_MONGODB_CONNECTION_STRING
+JWT_SECRET=YOUR_SECRET_KEY
+OPENROUTER_API_KEY=YOUR_API_KEY
+AI_MODEL=qwen/qwen3-30b-a3b
+```
+
+Run the backend
+
+```bash
+npm start
+```
+
+---
+
+## Android Setup
+
+Open the project inside Android Studio.
+
+Update the Retrofit base URL:
+
+```kotlin
+private const val BASE_URL = "YOUR_BACKEND_URL/"
+```
+
+Run the application on an emulator or physical Android device.
+
+---
+
+# 📡 REST API
+
+## Authentication
+
+```
+POST /api/auth/register
+
+POST /api/auth/login
+```
+
+---
+
+## Resume
+
+```
+POST /api/resume/upload
+
+POST /api/resume/parse
+```
+
+---
+
+## Interview
+
+```
+POST /api/interview/start
+
+POST /api/interview/next
+
+POST /api/interview/evaluate
+
+GET /api/interview/history
+
+GET /api/interview/report/:id
+```
+
+---
+
+# 🧠 AI Workflow
+
+```
+Resume Upload
+        │
+        ▼
+Resume Parsing
+        │
+        ▼
+Skill Extraction
+        │
+        ▼
+Generate First Question
+        │
+        ▼
+Voice Interview
+        │
+        ▼
+Adaptive Question Generation
+        │
+        ▼
+Interview Completion
+        │
+        ▼
+AI Performance Evaluation
+        │
+        ▼
+Store Report in MongoDB
+        │
+        ▼
+History Screen
+```
+
+---
+
+# 🌟 Future Improvements
+
+- HR Interview Mode
+- Coding Interview Mode
+- Company-specific Interview Sets
+- AI Voice Emotion Analysis
+- PDF Report Export
+- Leaderboards
+- ATS Resume Score
+- Multi-language Support
+- Interview Recording Playback
+- Analytics Dashboard
+
+---
+
+# 👨‍💻 Author
+
+**Aaditya Chitale**
+
+- GitHub: https://github.com/cipherByte7
+- LinkedIn: www.linkedin.com/in/aaditya-chitale-41287528b
+
+---
+
+# 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+# ⭐ Support
+
+If you found this project useful, please consider giving it a ⭐ on GitHub.
+
+It helps others discover the project and motivates future development.
