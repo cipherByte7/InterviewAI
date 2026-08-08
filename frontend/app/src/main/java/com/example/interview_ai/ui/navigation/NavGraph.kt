@@ -18,6 +18,8 @@ import com.example.interview_ai.viewmodel.DashboardViewModel
 import com.example.interview_ai.viewmodel.InterviewViewModel
 import com.example.interview_ai.viewmodel.ReportViewModel
 import com.example.interview_ai.viewmodel.HistoryViewModel
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 
 @Composable
 fun AppNavGraph(
@@ -54,8 +56,23 @@ fun AppNavGraph(
             InterviewScreen(navController, interviewViewModel, dashboardViewModel)
         }
 
-        composable(Routes.Report.route) {
-            ReportScreen(navController, reportViewModel)
+        composable(
+            route = Routes.Report.route,
+            arguments = listOf(
+                navArgument("reportId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+
+            val reportId =
+                backStackEntry.arguments?.getString("reportId") ?: ""
+
+            ReportScreen(
+                navController = navController,
+                viewModel = reportViewModel,
+                reportId = reportId
+            )
         }
 
         composable(Routes.History.route) {

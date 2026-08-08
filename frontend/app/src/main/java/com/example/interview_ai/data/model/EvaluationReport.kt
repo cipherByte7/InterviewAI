@@ -1,5 +1,7 @@
 package com.example.interview_ai.data.model
 
+import com.google.gson.annotations.SerializedName
+
 data class EvaluationDimension(
     val title: String,
     val score: Int,
@@ -7,8 +9,10 @@ data class EvaluationDimension(
 )
 
 data class EvaluationReport(
+    @SerializedName("_id", alternate = ["id"])
     val id: String = "",
     val role: String = "",
+    val category: String = "Technical",
     val date: String = "",
     val overallScore: Int = 0,
     val duration: String = "",
@@ -17,3 +21,4 @@ data class EvaluationReport(
     val weaknesses: List<String> = emptyList(),
     val suggestion: String = ""
 )
+

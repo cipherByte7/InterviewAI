@@ -8,7 +8,8 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.11.0",
+    "@google/generative-ai": "^0.11.5",
+    "axios": "^1.19.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -16,6 +17,11 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.4.1",
     "multer": "^2.2.0",
+    "openai": "^7.4.0",
     "pdf-parse": "^2.4.5"
-  }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
 }

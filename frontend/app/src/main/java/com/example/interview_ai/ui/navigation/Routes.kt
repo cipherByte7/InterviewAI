@@ -12,7 +12,9 @@ sealed class Routes(val route: String) {
 
     object Interview : Routes("interview")
 
-    object Report : Routes("report")
+    object Report : Routes("report/{reportId}") {
+        fun createRoute(reportId: String) = "report/$reportId"
+    }
 
     object History : Routes("history")
 

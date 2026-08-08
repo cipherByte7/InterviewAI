@@ -2,6 +2,7 @@ package com.example.interview_ai.ui.screens.report
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import com.example.interview_ai.viewmodel.InterviewViewModel
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,12 +71,13 @@ import com.example.interview_ai.viewmodel.ReportViewModel
 @Composable
 fun ReportScreen(
     navController: NavHostController,
-    viewModel: ReportViewModel
-) {
+    viewModel: ReportViewModel,
+    reportId: String
+){
     val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(Unit) {
-        viewModel.loadEvaluationReport()
+    LaunchedEffect(reportId) {
+        viewModel.loadEvaluationReport(reportId)
     }
 
     Scaffold(
@@ -394,17 +396,12 @@ fun ReportScreen(
                             PrimaryButton(
                                 text = "Practice Again",
                                 onClick = {
+
                                     navController.navigate(Routes.Interview.route) {
-                                        popUpTo(Routes.Interview.route) { inclusive = true }
+                                        popUpTo(Routes.Report.route) {
+                                            inclusive = true
+                                        }
                                     }
-                                },
-                                modifier = Modifier.weight(1.3f),
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Default.PlayArrow,
-                                        contentDescription = "Restart practice icon",
-                                        tint = TextPrimary
-                                    )
                                 }
                             )
                         }

@@ -13,6 +13,10 @@ const ReportSchema = new mongoose.Schema({
     required: true
   },
   role: String,
+  category: {
+    type: String,
+    default: 'Technical'
+  },
   date: {
     type: String,
     default: () => new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
@@ -23,6 +27,24 @@ const ReportSchema = new mongoose.Schema({
   strengths: [String],
   weaknesses: [String],
   suggestion: String
+});
+
+ReportSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    ret.id = ret._id.toString();
+    delete ret.__v;
+    return ret;
+  }
+});
+
+ReportSchema.set('toObject', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    ret.id = ret._id.toString();
+    delete ret.__v;
+    return ret;
+  }
 });
 
 module.exports = mongoose.model('Report', ReportSchema);

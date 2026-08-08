@@ -39,6 +39,7 @@ class HistoryViewModel : ViewModel() {
                     InterviewSession(
                         id = report.id,
                         role = report.role,
+                        category = report.category,
                         date = report.date,
                         score = report.overallScore
                     )
@@ -83,11 +84,7 @@ class HistoryViewModel : ViewModel() {
 
         val filtered = _uiState.value.sessions.filter { session ->
             val matchesQuery = session.role.lowercase().contains(query)
-            val matchesFilter = when (filter) {
-                "Technical" -> !session.role.lowercase().contains("behavioral")
-                "Behavioral" -> session.role.lowercase().contains("behavioral")
-                else -> true
-            }
+            val matchesFilter = filter == "All" || session.category.equals(filter, ignoreCase = true)
             matchesQuery && matchesFilter
         }
 

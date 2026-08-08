@@ -75,6 +75,10 @@ fun HistoryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        viewModel.loadHistorySessions()
+    }
+
     Scaffold(
         topBar = {
             AppTopBar(
@@ -221,7 +225,9 @@ fun HistoryScreen(
                         onRetry = { viewModel.refresh() }
                     )
                     uiState.sessions.isEmpty() -> HistoryEmptyContent(
-                        onStart = { navController.navigate(Routes.Interview.route) }
+                        onStart = {
+                            navController.navigate(Routes.Interview.route)
+                        }
                     )
                     uiState.filteredSessions.isEmpty() -> Column(
                         modifier = Modifier
@@ -252,7 +258,11 @@ fun HistoryScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { navController.navigate(Routes.Report.route) }
+                                    .clickable {
+                                        navController.navigate(
+                                            Routes.Report.createRoute(session.id)
+                                        )
+                                    }
                                     .padding(AppSpacing.md),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically

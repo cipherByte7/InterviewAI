@@ -3,6 +3,7 @@ package com.example.interview_ai.data.model
 data class InterviewSession(
     val id: String,
     val role: String,
+    val category: String = "Technical",
     val date: String,
     val score: Int
 )

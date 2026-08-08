@@ -23,26 +23,22 @@ class ReportViewModel : ViewModel() {
     val uiState: StateFlow<ReportUiState> = _uiState.asStateFlow()
 
     init {
-        loadEvaluationReport()
+        //loadEvaluationReport()
     }
 
-    fun loadEvaluationReport() {
+    fun loadEvaluationReport(reportId: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
                 // Fetch reports list from backend API
-                val history = RetrofitClient.apiService.getHistory()
-                if (history.isNotEmpty()) {
-                    // First report is the most recent evaluation
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            report = history[0],
-                            errorMessage = null
-                        )
-                    }
-                } else {
-                    loadFallbackReport()
+                val report = RetrofitClient.apiService.getReport(reportId)
+
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        report = report,
+                        errorMessage = null
+                    )
                 }
             } catch (e: Exception) {
                 // Connection/Server failure, fallback to mock details

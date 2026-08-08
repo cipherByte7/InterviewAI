@@ -2,11 +2,12 @@ const mongoose = require('mongoose');
 const Report = require('../models/Report');
 const User = require('../models/User');
 const { getMongoStatus, memoryReports, memoryUsers } = require('../config/db');
-const { 
-  generateFirstQuestionWithAI, 
-  generateNextQuestionWithAI, 
-  evaluateFullInterviewWithAI 
-} = require('../services/geminiService');
+const {
+    parseResumeWithAI,
+    generateFirstQuestionWithAI,
+    generateNextQuestionWithAI,
+    evaluateFullInterviewWithAI
+} = require("../services/aiService");
 
 const startInterview = async (req, res) => {
   const { targetRole, difficulty, category } = req.body;
@@ -100,6 +101,7 @@ const evaluateInterview = async (req, res) => {
   // Fallback evaluation structure if Gemini fails
   const localFeedbackMock = {
     role: activeRole,
+    category: qCat,
     date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
     overallScore: 84,
     duration: duration || "05:00",

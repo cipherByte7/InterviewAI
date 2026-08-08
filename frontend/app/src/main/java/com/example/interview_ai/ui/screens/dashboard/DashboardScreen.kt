@@ -92,6 +92,10 @@ fun DashboardScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedItem by remember { mutableIntStateOf(0) }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        viewModel.loadDashboardData()
+    }
     
     val context = LocalContext.current
     var showUploadSheet by remember { mutableStateOf(false) }
@@ -102,6 +106,7 @@ fun DashboardScreen(
     ) { uri: Uri? ->
         uri?.let {
             val fileName = getFileNameFromUri(context, it) ?: "resume.pdf"
+            showUploadSheet = false  // Close sheet immediately before async upload begins
             viewModel.uploadResume(context, it, fileName)
         }
     }
@@ -547,24 +552,35 @@ fun DashboardScreen(
                             color = TextMuted
                         )
                         Spacer(modifier = Modifier.height(4.dp))
-                        
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
-                            verticalArrangement = Arrangement.spacedBy(AppSpacing.xs),
-                            modifier = Modifier.fillMaxWidth()
+
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            parsed.skills.forEach { skill ->
-                                Box(
-                                    modifier = Modifier
-                                        .background(SurfaceVariantDark, RoundedCornerShape(4.dp))
-                                        .border(1.dp, BorderSubtle, RoundedCornerShape(4.dp))
-                                        .padding(horizontal = AppSpacing.sm, vertical = 2.dp)
+                            parsed.skills.chunked(3).forEach { row ->
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Text(
-                                        text = skill,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondary
-                                    )
+                                    row.forEach { skill ->
+                                        Box(
+                                            modifier = Modifier
+                                                .background(
+                                                    SurfaceVariantDark,
+                                                    RoundedCornerShape(4.dp)
+                                                )
+                                                .border(
+                                                    1.dp,
+                                                    BorderSubtle,
+                                                    RoundedCornerShape(4.dp)
+                                                )
+                                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = skill,
+                                                color = TextSecondary,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -609,7 +625,9 @@ fun DashboardScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { navController.navigate(Routes.Report.route) }
+                                    .clickable {
+                                        navController.navigate(Routes.Report.createRoute(session.id))
+                                    }
                                     .padding(AppSpacing.md),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically

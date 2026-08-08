@@ -347,22 +347,34 @@ fun ProfileScreen(
                             color = TextMuted
                         )
                     } else {
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(AppSpacing.sm),
-                            verticalArrangement = Arrangement.spacedBy(AppSpacing.sm)
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            skills.forEach { skill ->
-                                Box(
-                                    modifier = Modifier
-                                        .background(SurfaceDark, RoundedCornerShape(AppRadius.full))
-                                        .border(0.5.dp, BorderSubtle, RoundedCornerShape(AppRadius.full))
-                                        .padding(horizontal = AppSpacing.md, vertical = 4.dp)
+                            skills.chunked(3).forEach { row ->
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Text(
-                                        text = skill,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = AccentCyan
-                                    )
+                                    row.forEach { skill ->
+                                        Box(
+                                            modifier = Modifier
+                                                .background(
+                                                    SurfaceVariantDark,
+                                                    RoundedCornerShape(4.dp)
+                                                )
+                                                .border(
+                                                    1.dp,
+                                                    BorderSubtle,
+                                                    RoundedCornerShape(4.dp)
+                                                )
+                                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = skill,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }

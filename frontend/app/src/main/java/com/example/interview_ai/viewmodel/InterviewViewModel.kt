@@ -34,7 +34,7 @@ class InterviewViewModel(application: Application) : AndroidViewModel(applicatio
     private val conversationHistory = mutableListOf<ConversationItem>()
     private var timerJob: Job? = null
     private var silenceDetectionJob: Job? = null
-    private var onSessionCompleted: (() -> Unit)? = null
+    private var onSessionCompleted: ((String) -> Unit)? = null
 
     fun setDifficulty(difficulty: String) {
         _uiState.update { it.copy(selectedDifficulty = difficulty) }
@@ -58,7 +58,11 @@ class InterviewViewModel(application: Application) : AndroidViewModel(applicatio
         _uiState.update { InterviewUiState() }
     }
 
-    fun startInterviewSession(targetRole: String, skills: List<String>, onCompleted: () -> Unit) {
+    fun startInterviewSession(
+        targetRole: String,
+        skills: List<String>,
+        onCompleted: (String) -> Unit
+    ) {
         this.onSessionCompleted = onCompleted
         answersTranscript.clear()
         conversationHistory.clear()
@@ -287,6 +291,7 @@ class InterviewViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun concludeInterview() {
         val concludeText = "Thank you. That concludes today's interview."
+
         _uiState.update {
             it.copy(
                 interviewState = InterviewState.AI_SPEAKING,
@@ -296,23 +301,28 @@ class InterviewViewModel(application: Application) : AndroidViewModel(applicatio
 
         ttsEngine.speak(concludeText) {
             viewModelScope.launch {
-                evaluateSession {
-                    onSessionCompleted?.invoke()
+                evaluateSession { reportId ->
+                    onSessionCompleted?.invoke(reportId)
                 }
             }
         }
     }
 
-    private fun evaluateSession(onCompleted: () -> Unit) {
+    private fun evaluateSession(onCompleted: (String) -> Unit) {
+
         viewModelScope.launch {
-            _uiState.update { it.copy(interviewState = InterviewState.PROCESSING) }
+
+            _uiState.update {
+                it.copy(interviewState = InterviewState.PROCESSING)
+            }
 
             val minutes = _uiState.value.sessionDurationSeconds / 60
             val seconds = _uiState.value.sessionDurationSeconds % 60
             val formattedTime = String.format("%02d:%02d", minutes, seconds)
 
             try {
-                RetrofitClient.apiService.evaluateInterview(
+
+                val report = RetrofitClient.apiService.evaluateInterview(
                     EvaluateRequest(
                         duration = formattedTime,
                         transcript = answersTranscript,
@@ -328,49 +338,62 @@ class InterviewViewModel(application: Application) : AndroidViewModel(applicatio
                         interviewState = InterviewState.COMPLETED
                     )
                 }
+
+                onCompleted(report.id)
+
             } catch (e: Exception) {
-                // Connection/Server failure fallback
+
                 delay(1200)
+
                 _uiState.update {
                     it.copy(
                         status = InterviewStatus.COMPLETED,
                         interviewState = InterviewState.COMPLETED
                     )
                 }
+
+                onCompleted("")
             }
-            onCompleted()
         }
     }
 
     fun togglePause() {
+
         _uiState.update { state ->
-            val nextPaused = !state.isPaused
             state.copy(
-                isPaused = nextPaused,
-                interviewState = if (nextPaused) state.interviewState else state.interviewState
+                isPaused = !state.isPaused
             )
         }
 
         if (_uiState.value.isPaused) {
+
             ttsEngine.stop()
             sttEngine.stopListening()
             silenceDetectionJob?.cancel()
+
         } else {
-            val state = _uiState.value.interviewState
-            if (state == InterviewState.LISTENING) {
-                startSpeechToTextListener()
-            } else if (state == InterviewState.AI_SPEAKING) {
-                speakActiveQuestion()
+
+            when (_uiState.value.interviewState) {
+
+                InterviewState.LISTENING -> startSpeechToTextListener()
+
+                InterviewState.AI_SPEAKING -> speakActiveQuestion()
+
+                else -> {}
             }
         }
     }
 
-    fun finishInterview(onCompleted: () -> Unit) {
+    fun finishInterview(onCompleted: (String) -> Unit) {
+
         this.onSessionCompleted = onCompleted
+
         ttsEngine.stop()
         sttEngine.stopListening()
+
         timerJob?.cancel()
         silenceDetectionJob?.cancel()
+
         evaluateSession(onCompleted)
     }
 

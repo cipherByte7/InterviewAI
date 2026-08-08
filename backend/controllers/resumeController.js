@@ -1,68 +1,100 @@
 const mongoose = require('mongoose');
-const pdfParse = require('pdf-parse');
+const { PDFParse } = require('pdf-parse');  // v2.x exports a class, not a function
 const User = require('../models/User');
 const { getMongoStatus, memoryUsers } = require('../config/db');
-const { parseResumeWithAI } = require('../services/geminiService');
+const { parseResumeWithAI } = require('../services/aiService');
 
-const parseResume = async (req, res) => {
-  const fallbackParsed = {
-    parsedRole: "Senior Android Dev",
-    experienceYears: 3,
-    skills: ["Kotlin", "Jetpack Compose", "Coroutines", "Dagger Hilt", "Clean Architecture"],
-    education: "B.Tech in Computer Science",
-    projectsCount: 4,
+// Fallback data shown when AI parsing fails or PDF text is unreadable
+const fallbackParsed = {
+  parsedRole: 'Software Developer',
+  experienceYears: 1,
+  skills: ['JavaScript', 'React', 'Node.js', 'Git', 'REST APIs'],
+  education: 'Bachelor of Technology',
+  projectsCount: 2,
+  isConfirmed: false
+};
+
+// Persists parsed resume to MongoDB or in-memory store
+// Defined at module scope so it's accessible in both try and catch
+const saveResumeToUser = async (userId, parsedData, resumeFileName, aiParsed = false) => {
+  const payload = {
+    parsedRole: parsedData.parsedRole || '',
+    experienceYears: Number(parsedData.experienceYears) || 0,
+    skills: Array.isArray(parsedData.skills) ? parsedData.skills : [],
+    education: parsedData.education || '',
+    projectsCount: Number(parsedData.projectsCount) || 0,
+    uploadedResumeName: resumeFileName || 'resume.pdf',
     isConfirmed: false
   };
 
-  let resumeText = req.body.resumeText || "";
+  const isMongoConnected = getMongoStatus();
+  if (isMongoConnected && mongoose.Types.ObjectId.isValid(userId)) {
+    await User.findByIdAndUpdate(userId, { parsedResume: payload });
+    console.log(`✅ Saved to MongoDB for user ${userId}`);
+  } else {
+    const userIdx = memoryUsers.findIndex(u => u._id.toString() === userId);
+    if (userIdx !== -1) {
+      memoryUsers[userIdx].parsedResume = payload;
+      console.log(`✅ Saved to in-memory store for user ${userId}`);
+    }
+  }
+  // Return payload + aiParsed flag so client knows if it's real AI data
+  return { ...payload, aiParsed };
+};
+
+const parseResume = async (req, res) => {
+  let resumeText = req.body.resumeText || '';
+  const resumeFileName = req.file ? req.file.originalname : 'resume.pdf';
 
   try {
+    // ── Step 1: Extract text from PDF ──────────────────────────────
     if (req.file) {
-      console.log(`Received file: ${req.file.originalname}, size: ${req.file.size} bytes`);
-      const data = await pdfParse(req.file.buffer);
-      resumeText = data.text;
+      console.log(`\n📄 Resume upload: ${req.file.originalname} (${(req.file.size / 1024).toFixed(1)} KB)`);
+      try {
+        const parser = new PDFParse({ data: req.file.buffer, verbosity: 0 });
+        await parser.load();
+        const pdfResult = await parser.getText();
+
+        console.log("PDF Result:", pdfResult);
+
+resumeText = pdfResult?.text || "";
+
+console.log(`📄 PDF text extracted: ${resumeText.length} characters`);
+        if (resumeText.trim().length < 50) {
+          console.warn('   ⚠ PDF has very little text — may be image-based (scanned). Gemini will use fallback.');
+        }
+      } catch (pdfErr) {
+        console.error('   ❌ pdf-parse error:', pdfErr.message);
+      }
     }
 
-    const saveToUser = async (parsedData) => {
-      const payload = {
-        parsedRole: parsedData.parsedRole,
-        experienceYears: parsedData.experienceYears,
-        skills: parsedData.skills,
-        education: parsedData.education,
-        projectsCount: parsedData.projectsCount,
-        uploadedResumeName: req.file ? req.file.originalname : "resume.pdf",
-        isConfirmed: false
-      };
-
-      const isMongoConnected = getMongoStatus();
-      if (isMongoConnected && mongoose.Types.ObjectId.isValid(req.userId)) {
-        await User.findByIdAndUpdate(req.userId, { parsedResume: payload });
-      } else {
-        const userIdx = memoryUsers.findIndex(u => u._id.toString() === req.userId);
-        if (userIdx !== -1) {
-          memoryUsers[userIdx].parsedResume = payload;
-        }
-      }
-      return payload;
-    };
-
-    const parsedData = await parseResumeWithAI(resumeText);
-    if (!parsedData) {
-      // Gemini not configured or parsing fallback
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const savedResume = await saveToUser(fallbackParsed);
+    // ── Step 2: Gemini AI Parsing ───────────────────────────────────
+    let parsedData = null;
+    if (resumeText.trim().length >= 50) {
+      console.log('   🤖 Sending to AI for parsing...');
+      parsedData = await parseResumeWithAI(resumeText);
+    } else {
+      console.warn('   ⚠ Skipping AI parsing — not enough text extracted from PDF');
+    }
+    
+    // ── Step 3: Save to MongoDB ─────────────────────────────────────
+    if (parsedData) {
+      console.log('   ✅ AI parsing succeeded:', parsedData.parsedRole);
+      const savedResume = await saveResumeToUser(req.userId, parsedData, resumeFileName, true);
+      return res.json(savedResume);
+    } else {
+      console.warn('   ⚠ AI returned null — saving fallback resume data');
+      const savedResume = await saveResumeToUser(req.userId, fallbackParsed, resumeFileName, false);
       return res.json(savedResume);
     }
 
-    const savedResume = await saveToUser(parsedData);
-    res.json(savedResume);
   } catch (err) {
-    console.error('Resume parsing failed, falling back to mock details.', err.message);
+    console.error('❌ Resume pipeline error:', err.message);
     try {
-      const savedResume = await saveToUser(fallbackParsed);
-      res.json(savedResume);
+      const savedResume = await saveResumeToUser(req.userId, fallbackParsed, resumeFileName, false);
+      return res.json(savedResume);
     } catch (saveErr) {
-      res.status(500).json({ msg: 'Resume parsing server error', error: saveErr.message });
+      return res.status(500).json({ msg: 'Resume parsing server error', error: saveErr.message });
     }
   }
 };

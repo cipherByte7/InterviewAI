@@ -106,8 +106,8 @@ fun InterviewScreen(
     ) { isGranted ->
         hasAudioPermission = isGranted
         if (isGranted) {
-            interviewViewModel.startInterviewSession(targetRole, skills) {
-                navController.navigate(com.example.interview_ai.ui.navigation.Routes.Report.route) {
+            interviewViewModel.startInterviewSession(targetRole, skills) { reportId ->
+                navController.navigate(com.example.interview_ai.ui.navigation.Routes.Report.createRoute(reportId)) {
                     popUpTo(com.example.interview_ai.ui.navigation.Routes.Interview.route) { inclusive = true }
                 }
             }
@@ -154,8 +154,8 @@ fun InterviewScreen(
                         onCountChange = { interviewViewModel.setQuestionCount(it) },
                         onGenerate = {
                             if (hasAudioPermission) {
-                                interviewViewModel.startInterviewSession(targetRole, skills) {
-                                    navController.navigate(com.example.interview_ai.ui.navigation.Routes.Report.route) {
+                                interviewViewModel.startInterviewSession(targetRole, skills) { reportId ->
+                                    navController.navigate(com.example.interview_ai.ui.navigation.Routes.Report.createRoute(reportId)) {
                                         popUpTo(com.example.interview_ai.ui.navigation.Routes.Interview.route) { inclusive = true }
                                     }
                                 }
