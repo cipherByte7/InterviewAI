@@ -5,7 +5,7 @@
 ![Android](https://img.shields.io/badge/Android-Jetpack%20Compose-3DDC84?logo=android)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0-7F52FF?logo=kotlin)
 ![Node.js](https://img.shields.io/badge/Backend-Node.js-339933?logo=node.js)
-![Express](https://img.shields.io/badge/Framework-Express.js-000000?logo=express)
+![Express](https://img.shields.io/badge/Framework-Express.js-1E88E5?logo=express&logoColor=white)
 ![MongoDB](https://img.shields.io/badge/Database-MongoDB-47A248?logo=mongodb)
 ![OpenRouter](https://img.shields.io/badge/AI-OpenRouter-blue)
 ![Render](https://img.shields.io/badge/Deployment-Render-46E3B7)
